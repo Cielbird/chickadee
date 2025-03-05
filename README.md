@@ -16,3 +16,7 @@ big help from https://sotrh.github.io/learn-wgpu/
 
 for some reason, `x86_64-pc-windows-msvc` has issues.
 
+
+## engine
+
+the engine is not flexible, it doesn't need to be.

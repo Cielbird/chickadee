@@ -7,16 +7,15 @@ use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use wgpu::util::DeviceExt;
 
-use crate::camera_controller::CameraController;
-
 use super::{
     camera::{Camera, CameraUniform}, 
-    model::{Model, ModelVertex, Vertex}, 
+    model::{ModelVertex, Vertex}, 
     resources::load_model, 
+    scene::Scene, 
     texture
 };
 
-pub struct State<'a> {
+pub struct Renderer<'a> {
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -25,15 +24,14 @@ pub struct State<'a> {
     window: Arc<Window>,
     render_pipeline: wgpu::RenderPipeline,
     camera_bind_group: wgpu::BindGroup,
-    camera: Camera,
+    pub camera: Camera,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
-    pub camera_controller: CameraController,
     depth_texture: texture::Texture,
-    model: Model,
+    scene: Scene,
 }
 
-impl<'a> State<'a> {
+impl<'a> Renderer<'a> {
     pub fn new (window: Window) -> Self {
         let window_arc = Arc::new(window);
         let size = window_arc.inner_size();
@@ -44,11 +42,7 @@ impl<'a> State<'a> {
         let surface_caps = surface.get_capabilities(&adapter);
         let config = Self::create_surface_config(size, surface_caps);
         surface.configure(&device, &config);
-        
-        let diffuse_bytes = include_bytes!("../texture.png");
-        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "texture")
-            .expect("Couldn't load texture");
-        
+
         // how should textures be bound to the shader
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -130,14 +124,14 @@ impl<'a> State<'a> {
 
         let render_pipeline = Self::create_render_pipeline(&device, &config, 
             &texture_bind_group_layout, &camera_bind_group_layout);
-                
-        let camera_controller = CameraController::new(0.02);
 
         let depth_texture = texture::Texture::create_depth_texture(&device, &config, "depth_texture");
 
         let model_fut = load_model("cube/cube.obj", &device, &queue, &texture_bind_group_layout);
         let model = pollster::block_on(model_fut)
             .expect("coulnd't load model");
+
+        let scene = Scene { models: vec![model] };
 
 
         Self {
@@ -149,11 +143,10 @@ impl<'a> State<'a> {
             window: window_arc,
             render_pipeline,
             camera_bind_group,
-            model,
+            scene,
             camera,
             camera_uniform,
             camera_buffer,
-            camera_controller,
             depth_texture,
         }
     }
@@ -287,7 +280,6 @@ impl<'a> State<'a> {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.camera_controller.update_camera(&mut self.camera);
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
 
@@ -330,8 +322,8 @@ impl<'a> State<'a> {
 
             render_pass.set_pipeline(&self.render_pipeline);
 
-            // render models
-            self.model.draw_model(&mut render_pass, &self.camera_bind_group)
+            // render scene
+            self.scene.draw_scene(&mut render_pass, &self.camera_bind_group)
                 .expect("couldn't draw mesh");
         }
 
