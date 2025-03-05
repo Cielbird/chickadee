@@ -1,4 +1,6 @@
+mod error;
 mod renderer;
+mod texture;
 mod lib;
 
 use winit::application::ApplicationHandler;
