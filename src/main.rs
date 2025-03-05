@@ -1,15 +1,12 @@
-mod error;
-mod renderer;
-mod texture;
-mod lib;
+mod engine;
+pub mod camera_controller;
 
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, WindowEvent};
+use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop};
-use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
 
-use crate::renderer::State;
+use crate::engine::state::State;
 
 pub async fn run() {
     let event_loop = EventLoop::new().unwrap();
@@ -50,15 +47,9 @@ impl<'a> ApplicationHandler for StateApplication<'a>{
                 WindowEvent::RedrawRequested => {
                     self.state.as_mut().unwrap().render().unwrap();
                 }
-                WindowEvent::KeyboardInput { device_id, event, is_synthetic } => {
-                    if let Key::Named(NamedKey::Space) = event.logical_key {
-                        match event.state {
-                            ElementState::Released => println!("Espace relâché"),
-                            ElementState::Pressed => println!("Espace pressé"),
-                        }
-                    }
+                _ => {
+                    self.state.as_mut().unwrap().camera_controller.process_events(&event);
                 }
-                _ => {}
             }
         }
     }

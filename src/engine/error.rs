@@ -1,13 +1,14 @@
 use std::fmt;
 
-use image::ImageError;
+use image;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    Image(ImageError),
-    Io(std::io::Error),
+    ImageError(image::ImageError),
+    IoError(std::io::Error),
+    ObjLoadError(tobj::LoadError),
     Other(String),
 }
 
@@ -26,12 +27,18 @@ impl std::error::Error for Error {
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self { 
-        return Self::Io(e);
+        return Self::IoError(e);
     }
 }
 
-impl From<ImageError> for Error {
-    fn from(e: ImageError) -> Self { 
-        return Self::Image(e);
+impl From<image::ImageError> for Error {
+    fn from(e: image::ImageError) -> Self { 
+        return Self::ImageError(e);
+    }
+}
+
+impl From<tobj::LoadError> for Error {
+    fn from(e: tobj::LoadError) -> Self { 
+        return Self::ObjLoadError(e);
     }
 }

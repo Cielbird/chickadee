@@ -7,7 +7,16 @@ edition = "2021"
 wgpu = "24.0.1"
 winit = "0.30.9"
 bytemuck = { version = "1.22.0", features = ["derive"] }
-pollster = "0.2"
+pollster = "0.4.0"
 cgmath = "0.18"
 image = "0.24"
+tobj = { version = "3.2", default-features = false, features = ["async"]}
+
+[build-dependencies]
+fs_extra = "1.2"
+glob = "0.3"
+
+
+[target.x86_64-pc-windows-msvc]
+linker = "x86_64-w64-mingw32-gcc"
 

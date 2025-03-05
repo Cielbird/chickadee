@@ -1,14 +1,20 @@
+
+
 use std::sync::Arc;
 
 use pollster::FutureExt;
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
-use wgpu::{util::DeviceExt, Texture};
+use wgpu::util::DeviceExt;
 
-use crate::{lib::{
-    Vertex, 
-    *
-}, texture};
+use crate::camera_controller::CameraController;
+
+use super::{
+    camera::{Camera, CameraUniform}, 
+    model::{Model, ModelVertex, Vertex}, 
+    resources::load_model, 
+    texture
+};
 
 pub struct State<'a> {
     surface: wgpu::Surface<'a>,
@@ -18,11 +24,13 @@ pub struct State<'a> {
     size: PhysicalSize<u32>,
     window: Arc<Window>,
     render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-    num_indices: u32,
-    diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture,
+    camera_bind_group: wgpu::BindGroup,
+    camera: Camera,
+    camera_uniform: CameraUniform,
+    camera_buffer: wgpu::Buffer,
+    pub camera_controller: CameraController,
+    depth_texture: texture::Texture,
+    model: Model,
 }
 
 impl<'a> State<'a> {
@@ -37,9 +45,11 @@ impl<'a> State<'a> {
         let config = Self::create_surface_config(size, surface_caps);
         surface.configure(&device, &config);
         
-        let diffuse_bytes = include_bytes!("texture.png");
-        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "texture").expect("Couldn't load texture");
-
+        let diffuse_bytes = include_bytes!("../texture.png");
+        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "texture")
+            .expect("Couldn't load texture");
+        
+        // how should textures be bound to the shader
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
@@ -66,27 +76,69 @@ impl<'a> State<'a> {
             }
         );
 
-        let diffuse_bind_group = device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                    }
-                ],
-                label: Some("diffuse_bind_group"),
+        let camera = Camera {
+            // position the camera 1 unit up and 2 units back
+            // +z is out of the screen
+            eye: (0.0, 1.0, 2.0).into(),
+            // have it look at the origin
+            target: (0.0, 0.0, 0.0).into(),
+            // which way is "up"
+            up: cgmath::Vector3::unit_y(),
+            aspect: config.width as f32 / config.height as f32,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        };
+
+        let mut camera_uniform = CameraUniform::new();
+        camera_uniform.update_view_proj(&camera);
+
+        let camera_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Camera Buffer"),
+                contents: bytemuck::cast_slice(&[camera_uniform]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             }
         );
 
-        let render_pipeline = Self::create_render_pipeline(&device, &config, &texture_bind_group_layout);
+        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        });
+        
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        });
 
-        let (vertex_buffer, index_buffer) = Self::create_buffers(&device);
-        let num_indices = INDICES.len() as u32;
+        let render_pipeline = Self::create_render_pipeline(&device, &config, 
+            &texture_bind_group_layout, &camera_bind_group_layout);
+                
+        let camera_controller = CameraController::new(0.02);
+
+        let depth_texture = texture::Texture::create_depth_texture(&device, &config, "depth_texture");
+
+        let model_fut = load_model("cube/cube.obj", &device, &queue, &texture_bind_group_layout);
+        let model = pollster::block_on(model_fut)
+            .expect("coulnd't load model");
+
 
         Self {
             surface,
@@ -96,40 +148,27 @@ impl<'a> State<'a> {
             size,
             window: window_arc,
             render_pipeline,
-            vertex_buffer,
-            index_buffer,
-            num_indices,
-            diffuse_bind_group,
-            diffuse_texture,
+            camera_bind_group,
+            model,
+            camera,
+            camera_uniform,
+            camera_buffer,
+            camera_controller,
+            depth_texture,
         }
     }
 
-    fn create_buffers(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer) {
-        let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor{
-                label: Some("Some Vertex Buffer"),
-                contents: bytemuck::cast_slice(VERTICES),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
-
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor{
-                label: Some("Some index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
-
-        (vertex_buffer, index_buffer)
-    }
-
-    fn create_render_pipeline(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, texture_bind_group_layout: &wgpu::BindGroupLayout) -> wgpu::RenderPipeline{
+    fn create_render_pipeline(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, 
+            texture_bind_group_layout: &wgpu::BindGroupLayout, 
+            camera_bind_group_layout: &wgpu::BindGroupLayout) -> wgpu::RenderPipeline{
         let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
         let render_pipeline_layout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor{
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[texture_bind_group_layout],
+                bind_group_layouts: &[
+                        texture_bind_group_layout,
+                        camera_bind_group_layout,
+                    ],
                 push_constant_ranges: &[],
             }
         );
@@ -142,7 +181,7 @@ impl<'a> State<'a> {
                     module: &shader,
                     entry_point: Some("vs_main"),
                     buffers: &[
-                        Vertex::buffer_layout(),
+                        ModelVertex::desc(),
                     ],
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                 },
@@ -173,7 +212,14 @@ impl<'a> State<'a> {
                     mask: !0,
                     alpha_to_coverage_enabled: false,
                 },
-                depth_stencil: None,
+                // how to write to depth texture
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: texture::Texture::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare: wgpu::CompareFunction::Less,
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default(),
+                }),
                 multiview: None,
                 cache: None, // only useful for andriod compilation targets
             }
@@ -241,6 +287,10 @@ impl<'a> State<'a> {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        self.camera_controller.update_camera(&mut self.camera);
+        self.camera_uniform.update_view_proj(&self.camera);
+        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+
         let output = self.surface.get_current_texture().unwrap();
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -266,17 +316,23 @@ impl<'a> State<'a> {
                         store: wgpu::StoreOp::Store,
                     }
                 })],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            // render models
+            self.model.draw_model(&mut render_pass, &self.camera_bind_group)
+                .expect("couldn't draw mesh");
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
