@@ -1,9 +1,10 @@
 mod renderer;
-mod utils;
+mod lib;
 
 use winit::application::ApplicationHandler;
-use winit::event::WindowEvent;
+use winit::event::{ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window, WindowId};
 
 use crate::renderer::State;
@@ -46,6 +47,14 @@ impl<'a> ApplicationHandler for StateApplication<'a>{
                 }
                 WindowEvent::RedrawRequested => {
                     self.state.as_mut().unwrap().render().unwrap();
+                }
+                WindowEvent::KeyboardInput { device_id, event, is_synthetic } => {
+                    if let Key::Named(NamedKey::Space) = event.logical_key {
+                        match event.state {
+                            ElementState::Released => println!("Espace relâché"),
+                            ElementState::Pressed => println!("Espace pressé"),
+                        }
+                    }
                 }
                 _ => {}
             }
