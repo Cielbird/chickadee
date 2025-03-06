@@ -1,3 +1,4 @@
+use noise::{NoiseFn, Perlin, Seedable};
 use wgpu::{util::DeviceExt, Buffer, Device, Queue};
 
 use super::{
@@ -29,11 +30,19 @@ impl VoxelChunk {
         let mut chunk = VoxelChunk {
             voxels: [[[VoxelState::EMPTY; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE],
         };
+
+        let perlin = Perlin::new(1);
+
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 for z in 0..CHUNK_SIZE {
-                    // random condition
-                    if x < 32 || (z + y) < 20 {
+                    let val = perlin.get([
+                        (x as f64) / CHUNK_SIZE as f64,
+                        (y as f64) / CHUNK_SIZE as f64,
+                        (z as f64) / CHUNK_SIZE as f64,
+                    ]);
+                    println!("{:?}", val);
+                    if val > 0.5 {
                         chunk.voxels[x][y][z] = VoxelState::FULL;
                     }
                 }
