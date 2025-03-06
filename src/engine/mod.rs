@@ -6,3 +6,4 @@ pub mod camera;
 pub mod model;
 pub mod scene;
 pub mod resources;
+pub mod transform;

@@ -14,6 +14,7 @@ struct VertexInput {
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(1) tex_coords: vec2<f32>,
+    @location(2) global_pos: vec3<f32>,
 };
 
 @vertex
@@ -23,14 +24,28 @@ fn vs_main(
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
     out.clip_position = camera.view_proj * vec4<f32>(model.pos, 1.0);
+    out.global_pos = model.pos;
     return out;
 }
+ 
 
 @group(0) @binding(0) var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1) var s_diffuse: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    var color = textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    let brightness = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+    var levels: f32 = 4;
+
+    var pixel_pos_x = u32(in.clip_position.x);
+    var pixel_pos_y = u32(in.clip_position.y);
+
+    if ((pixel_pos_y + pixel_pos_x) % 2 == 0) {
+        levels *= 2;
+    }
+
+    var out_color = round(color * levels) / levels;
+    return out_color;
 }
  

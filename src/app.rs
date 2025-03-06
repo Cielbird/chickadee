@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::camera_controller::CameraController;
 use crate::engine::engine::Engine;
 
@@ -21,7 +23,7 @@ impl<'a> Application<'a> {
     }
 
     pub fn on_event(&mut self, event: &WindowEvent) {
-        self.camera_controller.process_events(&event);
+        self.camera_controller.on_event(&event);
     }
 
     pub fn on_update(&mut self) {
@@ -32,8 +34,13 @@ impl<'a> Application<'a> {
 
 impl<'a> ApplicationHandler for Application<'a>{
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window = event_loop.create_window(Window::default_attributes().with_title("Hello!")).unwrap();
-        self.engine = Some(Engine::new(window));
+        let win_attribs = Window::default_attributes()
+            .with_title("Hello!");
+        let window = event_loop.create_window(win_attribs).unwrap();
+        let window_arc = Arc::new(window);
+        self.engine = Some(Engine::new(Arc::clone(&window_arc)));
+        self.camera_controller.window = Some(Arc::clone(&window_arc));
+        self.camera_controller.set_mouse_captured(false);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
@@ -56,10 +63,10 @@ impl<'a> ApplicationHandler for Application<'a>{
                     
                     self.on_update();
                 }
-                _ => {
-                    self.on_event(&event);
-                }
+                _ => { }
             }
+
+            self.on_event(&event);
         }
     }
 

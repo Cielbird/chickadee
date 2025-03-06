@@ -82,10 +82,10 @@ impl Texture {
     
     pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float; // 1.
     
-    pub fn create_depth_texture(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, label: &str) -> Self {
+    pub fn create_depth_texture(device: &wgpu::Device, output_texture: &wgpu::Texture, label: &str) -> Self {
         let size = wgpu::Extent3d { // 2.
-            width: config.width.max(1),
-            height: config.height.max(1),
+            width: output_texture.width(),
+            height: output_texture.height(),
             depth_or_array_layers: 1,
         };
         let desc = wgpu::TextureDescriptor {
