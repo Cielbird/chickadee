@@ -20,3 +20,5 @@ for some reason, `x86_64-pc-windows-msvc` has issues.
 ## engine
 
 the engine is not flexible, it doesn't need to be.
+
+coordinates are left handed, x to the right, y up, z out of screen

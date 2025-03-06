@@ -21,7 +21,7 @@ pub struct CameraController {
 impl CameraController {
     pub fn new(speed: f32) -> Self {
         Self {
-            walk_speed: 0.02,
+            walk_speed: 0.01,
             cam_speed: 0.001,
             window: None,
             mouse_captured: true,

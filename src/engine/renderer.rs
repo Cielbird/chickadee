@@ -14,7 +14,7 @@ use super::{
     resources::load_model, 
     scene::Scene, 
     texture, 
-    transform,
+    transform, voxels::VoxelChunk,
 };
 
 pub struct Renderer<'a> {
@@ -129,7 +129,13 @@ impl<'a> Renderer<'a> {
         let model = pollster::block_on(model_fut)
             .expect("coulnd't load model");
 
-        let scene = Scene { models: vec![model] };
+        let voxel_chunk = VoxelChunk::new();
+        let voxels = voxel_chunk.get_model(&device, &queue, &texture_bind_group_layout).unwrap();
+
+        let scene = Scene { models: vec![
+            model,
+            voxels,
+        ] };
 
 
         Self {
