@@ -22,7 +22,7 @@ impl Transform {
         rotation.z.truncate()
     }
 
-    fn move_global(&mut self, vector: Vector3<f32>) {
+    pub fn move_global(&mut self, vector: Vector3<f32>) {
         self.position += vector;
     }
 
