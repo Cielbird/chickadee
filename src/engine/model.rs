@@ -13,7 +13,7 @@ pub trait Vertex {
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct ModelVertex {
     pub position: [f32; 3],
-    pub tex_coords: [f32; 2],
+    pub uvs: [f32; 2],
     pub normal: [f32; 3],
 }
 
@@ -28,6 +28,7 @@ pub struct Material {
     pub bind_group: wgpu::BindGroup,
 }
 
+#[derive(Debug)]
 pub struct Mesh {
     pub name: String,
     pub vertex_buffer: wgpu::Buffer,

@@ -6,7 +6,7 @@ use cgmath::{One, Point3, Quaternion, Vector3, Zero};
 use pollster::FutureExt;
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
-use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Texture};
+use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device, Texture};
 
 use super::{
     camera::{Camera, CameraUniform}, 
@@ -93,32 +93,9 @@ impl<'a> Renderer<'a> {
             }
         );
 
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }
-            ],
-            label: Some("camera_bind_group_layout"),
-        });
+        let camera_bind_group_layout = Self::create_camera_bind_group_layout(&device);
         
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buffer.as_entire_binding(),
-                }
-            ],
-            label: Some("camera_bind_group"),
-        });
+        let camera_bind_group = Self::create_camera_bind_group(&device, &camera_bind_group_layout, &camera_buffer);
 
         let render_pipeline = Self::create_render_pipeline(&device, &config, 
             &texture_bind_group_layout, &camera_bind_group_layout);
@@ -154,6 +131,37 @@ impl<'a> Renderer<'a> {
             camera_buffer,
             depth_texture,
         }
+    }
+
+    fn create_camera_bind_group(device: &Device, camera_bind_group_layout: &BindGroupLayout, camera_buffer: &Buffer) -> BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        }) 
+    }
+
+    fn create_camera_bind_group_layout(device: &Device) -> BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        })
     }
 
     fn create_post_processing_pipepine(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, 

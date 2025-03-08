@@ -1,3 +1,4 @@
+use cgmath::{Point3};
 use noise::{NoiseFn, Perlin, Seedable};
 use wgpu::{util::DeviceExt, Buffer, Device, Queue};
 
@@ -8,8 +9,11 @@ use super::{
 
 use crate::engine::resources::load_texture;
 
-const CHUNK_SIZE: usize = 32;
+const CHUNK_SIZE: usize = 8;
 const VOXEL_SIZE: f32 = 1.0;
+
+const TEX_SIZE: usize = 128;
+const TEX_FACE_SIZE: usize = 8;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -18,20 +22,33 @@ enum VoxelState {
     FULL,
 }
 
+
+#[derive(Debug)]
+enum FaceDir {
+    X_POS,
+    X_NEG,
+    Y_POS,
+    Y_NEG,
+    Z_POS,
+    Z_NEG,
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct VoxelChunk {
     // indices: [x][y][z]
     voxels: [[[VoxelState; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE],
+    chunk_pos: cgmath::Point3<i32>,
 }
 
 impl VoxelChunk {
     pub fn new() -> Self {
         let mut chunk = VoxelChunk {
             voxels: [[[VoxelState::EMPTY; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE],
+            chunk_pos: Point3::<i32>::new(0, 0, 0)
         };
 
-        let perlin = Perlin::new(1);
+        let perlin = Perlin::new(20);
 
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
@@ -40,8 +57,7 @@ impl VoxelChunk {
                         (x as f64) / CHUNK_SIZE as f64,
                         (y as f64) / CHUNK_SIZE as f64,
                         (z as f64) / CHUNK_SIZE as f64,
-                    ]);
-                    println!("{:?}", val);
+                    ]) / ((y as f64) / CHUNK_SIZE as f64 * 2.);
                     if val > 0.5 {
                         chunk.voxels[x][y][z] = VoxelState::FULL;
                     }
@@ -90,240 +106,19 @@ impl VoxelChunk {
         let mut vertices = vec![];
         let mut indices = vec![];
         let mut num_verts = 0;
-        
-        for i in 0..CHUNK_SIZE {
-            for j in 0..CHUNK_SIZE {
-                for k in 0..CHUNK_SIZE {
-                    if self.voxels[i][j][k] == VoxelState::FULL {
-                        let x = (i as f32) * VOXEL_SIZE;
-                        let y = (j as f32) * VOXEL_SIZE;
-                        let z = (k as f32) * VOXEL_SIZE;
 
-                        if k == CHUNK_SIZE - 1 || self.voxels[i][j][k + 1] == VoxelState::EMPTY {
-                            // back face
-                            // y
-                            // ^
-                            // 3 - 2
-                            // | / |
-                            // 0 - 1 > x
-                            vertices.push(ModelVertex {
-                                position: [x, y, z + VOXEL_SIZE],
-                                tex_coords: [0.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
-                                tex_coords: [1.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
-                                tex_coords: [1.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
-                                tex_coords: [0.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            indices.push(num_verts);
-                            indices.push(num_verts + 1);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts + 3);
+        Self::add_voxel_face(&mut vertices, &mut indices, &mut num_verts, FaceDir::Y_POS, Point3 { x: 2., y: 0., z: 0. });
+        // for i in 0..CHUNK_SIZE {
+        //     for j in 0..CHUNK_SIZE {
+        //         for k in 0..CHUNK_SIZE {
+        //             if self.voxels[i][j][k] == VoxelState::FULL {
+        //                 self.add_voxel_faces(&mut vertices, &mut indices, &mut num_verts, Point3 { x: i, y: j, z: k });
+        //             }
+        //         }
+        //     }     
+        // }
 
-                            num_verts += 4;
-                        }
-
-                        if j == CHUNK_SIZE - 1 || self.voxels[i][j + 1][k] == VoxelState::EMPTY {
-                            // top face
-                            // 3 - 2 > x
-                            // | / |
-                            // 0 - 1
-                            // v
-                            // z
-                            vertices.push(ModelVertex {
-                                position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
-                                tex_coords: [0.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
-                                tex_coords: [1.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
-                                tex_coords: [1.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y + VOXEL_SIZE, z],
-                                tex_coords: [0.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            indices.push(num_verts);
-                            indices.push(num_verts + 1);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts + 3);
-                            
-                            num_verts += 4;
-                        }
-
-                        if i == CHUNK_SIZE - 1 || self.voxels[i + 1][j][k] == VoxelState::EMPTY {
-                            // right face
-                            //         y
-                            //         ^
-                            //     3 - 2
-                            //     | / |
-                            // z < 0 - 1
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
-                                tex_coords: [0.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y, z],
-                                tex_coords: [1.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
-                                tex_coords: [1.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
-                                tex_coords: [0.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            indices.push(num_verts);
-                            indices.push(num_verts + 1);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts + 3);
-                            
-                            num_verts += 4;
-                        }
-
-                        if i == 0 || self.voxels[i - 1][j][k] == VoxelState::EMPTY {
-                            // left face
-                            // y
-                            // ^
-                            // 3 - 2
-                            // | / |
-                            // 0 - 1 > z
-                            vertices.push(ModelVertex {
-                                position: [x, y, z],
-                                tex_coords: [0.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y, z + VOXEL_SIZE],
-                                tex_coords: [1.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
-                                tex_coords: [1.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y + VOXEL_SIZE, z],
-                                tex_coords: [0.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            indices.push(num_verts);
-                            indices.push(num_verts + 1);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts + 3);
-                            
-                            num_verts += 4;
-                        }
-
-                        if j == 0 || self.voxels[i][j - 1][k] == VoxelState::EMPTY {
-                            // bottom face
-                            // z
-                            // ^
-                            // 3 - 2 > x
-                            // | / |
-                            // 0 - 1
-                            vertices.push(ModelVertex {
-                                position: [x, y, z],
-                                tex_coords: [0.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y, z],
-                                tex_coords: [1.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
-                                tex_coords: [1.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y, z + VOXEL_SIZE],
-                                tex_coords: [0.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            indices.push(num_verts);
-                            indices.push(num_verts + 1);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts + 3);
-                            
-                            num_verts += 4;
-                        }
-
-                        if k == 0 || self.voxels[i][j][k - 1] == VoxelState::EMPTY {
-                            // front face
-                            //         y
-                            //         ^
-                            //     3 - 2
-                            //     | / |
-                            // x < 0 - 1
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y, z],
-                                tex_coords: [0.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y, z],
-                                tex_coords: [1.0, 0.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x, y + VOXEL_SIZE, z],
-                                tex_coords: [1.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            vertices.push(ModelVertex {
-                                position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
-                                tex_coords: [0.0, 1.0],
-                                normal: [0.0, 0.0, 0.0],
-                            });
-                            indices.push(num_verts);
-                            indices.push(num_verts + 1);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts);
-                            indices.push(num_verts + 2);
-                            indices.push(num_verts + 3);
-                            
-                            num_verts += 4;
-                        }
-                    }
-                }
-            }     
-        }
+        println!("verts: {:?}, indices: {:?}", vertices, indices);
 
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor{
@@ -341,12 +136,252 @@ impl VoxelChunk {
             }
         );
 
-        Ok(Mesh {
+        let mesh = Mesh {
             name: "Voxel Mesh".to_string(),
             vertex_buffer,
             index_buffer,
             num_elements: indices.len() as u32,
             material: 0,
-        })
+        };
+        println!("mesh: {:?}", mesh);
+
+        Ok(mesh)
+    }
+
+    fn add_voxel_faces(&self, 
+        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<usize>, num_verts: &mut usize,
+        voxel_indices: cgmath::Point3<usize>,
+    ) {
+        // indices in chunck
+        let i = voxel_indices.x;
+        let j = voxel_indices.y;
+        let k = voxel_indices.z;
+
+        // global positions
+        let chunk_origin = self.chunk_pos * CHUNK_SIZE as i32;
+        let global_pos = Point3 {
+            x: chunk_origin.x as f32 + voxel_indices.x as f32 * VOXEL_SIZE,
+            y: chunk_origin.x as f32 + voxel_indices.y as f32 * VOXEL_SIZE,
+            z: chunk_origin.x as f32 + voxel_indices.z as f32 * VOXEL_SIZE,
+        };
+
+        if k < CHUNK_SIZE - 1 && self.voxels[i][j][k + 1] == VoxelState::EMPTY {
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Z_POS, global_pos);
+        }
+
+        if j < CHUNK_SIZE - 1 && self.voxels[i][j + 1][k] == VoxelState::EMPTY {
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Y_POS, global_pos);
+        }
+
+        if i < CHUNK_SIZE - 1 && self.voxels[i + 1][j][k] == VoxelState::EMPTY {
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::X_POS, global_pos);
+        }
+
+        if i > 0 && self.voxels[i - 1][j][k] == VoxelState::EMPTY {
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::X_NEG, global_pos);
+        }
+
+        if j > 0 && self.voxels[i][j - 1][k] == VoxelState::EMPTY {
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Y_NEG, global_pos);
+        }
+
+        if k > 0 && self.voxels[i][j][k - 1] == VoxelState::EMPTY {
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Z_NEG, global_pos);
+        }
+    }
+
+    fn add_voxel_face(
+        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<usize>, num_verts: &mut usize,
+        facing_dir: FaceDir, origin: Point3<f32>
+    ) {
+        let d_uv = (TEX_FACE_SIZE as f32)/(TEX_SIZE as f32);
+        let x = origin.x;
+        let y = origin.y;
+        let z = origin.z;
+        match facing_dir {
+            FaceDir::Z_POS => {
+                // back face
+                // y
+                // ^
+                // 3 - 2
+                // | / |
+                // 0 - 1 > x
+                let (u, v) = (2., 0.);
+                vertices.push(ModelVertex {
+                    position: [x, y, z + VOXEL_SIZE],
+                    uvs: [d_uv * u, d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
+                    uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
+                    uvs: [d_uv * (u + 1.), d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
+                    uvs: [d_uv * u, d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+            }
+            FaceDir::Y_POS => {
+                // top face
+                // 3 - 2 > x
+                // | / |
+                // 0 - 1
+                // v
+                // z
+                let (u, v) = (3., 1.);
+                vertices.push(ModelVertex {
+                    position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
+                    uvs: [d_uv * u, d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
+                    uvs: [d_uv * (u + 1.), d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
+                    uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y + VOXEL_SIZE, z],
+                    uvs: [d_uv * u, d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+            }
+            FaceDir::X_POS => {
+                // right face
+                //         y
+                //         ^
+                //     3 - 2
+                //     | / |
+                // z < 0 - 1
+                let (u, v) = (2., 0.);
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
+                    uvs: [d_uv * u, d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y, z],
+                    uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
+                    uvs: [d_uv * (u + 1.), d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
+                    uvs: [d_uv * u, d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+            }
+            FaceDir::X_NEG => {
+                // left face
+                // y
+                // ^
+                // 3 - 2
+                // | / |
+                // 0 - 1 > z
+                let (u, v) = (2., 0.);
+                vertices.push(ModelVertex {
+                    position: [x, y, z],
+                    uvs: [d_uv * u, d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y, z + VOXEL_SIZE],
+                    uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
+                    uvs: [d_uv * (u + 1.), d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y + VOXEL_SIZE, z],
+                    uvs: [d_uv * u, d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+            }
+            FaceDir::Y_NEG => {
+                // bottom face
+                // z
+                // ^
+                // 3 - 2 > x
+                // | / |
+                // 0 - 1
+                let (u, v) = (2., 1.);
+                vertices.push(ModelVertex {
+                    position: [x, y, z],
+                    uvs: [d_uv * u, d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y, z],
+                    uvs: [d_uv * (u + 1.), d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
+                    uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y, z + VOXEL_SIZE],
+                    uvs: [d_uv * u, d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+            }
+            FaceDir::Z_NEG => {
+                // front face
+                //         y
+                //         ^
+                //     3 - 2
+                //     | / |
+                // x < 0 - 1
+                let (u, v) = (2., 0.);
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y, z],
+                    uvs: [d_uv * u, d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y, z],
+                    uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x, y + VOXEL_SIZE, z],
+                    uvs: [d_uv * (u + 1.), d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+                vertices.push(ModelVertex {
+                    position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
+                    uvs: [d_uv * u, d_uv * v],
+                    normal: [0.0, 0.0, 0.0],
+                });
+            }
+            _ => return
+        }
+        
+        indices.push(*num_verts);
+        indices.push(*num_verts + 1);
+        indices.push(*num_verts + 2);
+        indices.push(*num_verts);
+        indices.push(*num_verts + 2);
+        indices.push(*num_verts + 3);
+        *num_verts += 4;
     }
 }
