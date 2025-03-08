@@ -104,7 +104,7 @@ impl VoxelChunk {
 
     fn get_mesh(&self, device: &Device) -> Result<Mesh> {
         let mut vertices = vec![];
-        let mut indices = vec![];
+        let mut indices: Vec<i32> = vec![];
         let mut num_verts = 0;
 
         Self::add_voxel_face(&mut vertices, &mut indices, &mut num_verts, FaceDir::Y_POS, Point3 { x: 2., y: 0., z: 0. });
@@ -117,9 +117,7 @@ impl VoxelChunk {
         //         }
         //     }     
         // }
-
-        println!("verts: {:?}, indices: {:?}", vertices, indices);
-
+        
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor{
                 label: Some("Some Vertex Buffer"),
@@ -149,7 +147,7 @@ impl VoxelChunk {
     }
 
     fn add_voxel_faces(&self, 
-        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<usize>, num_verts: &mut usize,
+        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<i32>, num_verts: &mut usize,
         voxel_indices: cgmath::Point3<usize>,
     ) {
         // indices in chunck
@@ -191,7 +189,7 @@ impl VoxelChunk {
     }
 
     fn add_voxel_face(
-        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<usize>, num_verts: &mut usize,
+        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<i32>, num_verts: &mut usize,
         facing_dir: FaceDir, origin: Point3<f32>
     ) {
         let d_uv = (TEX_FACE_SIZE as f32)/(TEX_SIZE as f32);
@@ -376,12 +374,13 @@ impl VoxelChunk {
             _ => return
         }
         
-        indices.push(*num_verts);
-        indices.push(*num_verts + 1);
-        indices.push(*num_verts + 2);
-        indices.push(*num_verts);
-        indices.push(*num_verts + 2);
-        indices.push(*num_verts + 3);
+        let first_index = *num_verts as i32;
+        indices.push(first_index);
+        indices.push(first_index + 1);
+        indices.push(first_index + 2);
+        indices.push(first_index);
+        indices.push(first_index + 2);
+        indices.push(first_index + 3);
         *num_verts += 4;
     }
 }
