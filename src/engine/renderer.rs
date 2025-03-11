@@ -1,6 +1,6 @@
 
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use cgmath::{One, Point3, Quaternion, Vector3, Zero};
 use pollster::FutureExt;
@@ -10,7 +10,7 @@ use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device, Texture}
 
 use super::{
     camera::{Camera, CameraUniform}, 
-    model::{ModelVertex, Vertex}, 
+    model::{Model, ModelVertex, Vertex}, 
     resources::load_model, 
     scene::Scene, 
     texture, 
@@ -18,22 +18,24 @@ use super::{
 };
 
 pub struct Renderer<'a> {
+    window: Arc<Window>,
+    scene: Arc<RwLock<Scene>>,
+    models: Vec<Model>,
+
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
-    window: Arc<Window>,
     render_pipeline: wgpu::RenderPipeline,
     post_proc: PostProcessing,
     camera_bind_group: wgpu::BindGroup,
-    pub camera: Camera,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
-    scene: Scene,
 }
 
+// rename, and make a lighting pass struct
 struct PostProcessing {
     pub bind_group: wgpu::BindGroup,
     pub pipeline: wgpu::RenderPipeline,
@@ -41,11 +43,13 @@ struct PostProcessing {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn new (window: Arc<Window>) -> Self {
-        let window_arc = Arc::clone(&window);
-        let size = window_arc.inner_size();
+    pub fn new (window: Arc<Window>, scene: Arc<RwLock<Scene>>) -> Self {
+        let window = window;
+        let scene = scene;
+
+        let size = window.inner_size();
         let instance = Self::create_gpu_instance();
-        let surface = instance.create_surface(window_arc.clone()).unwrap();
+        let surface = instance.create_surface(window.clone()).unwrap();
         let adapter = Self::create_adapter(instance, &surface);
         let (device, queue) = Self::create_device(&adapter);
         let surface_caps = surface.get_capabilities(&adapter);
@@ -66,24 +70,8 @@ impl<'a> Renderer<'a> {
         // how should textures be bound to the shader
         let texture_bind_group_layout = Self::create_texture_bind_group_layout(&device);
 
-        let camera = Camera {
-            // position the camera 1 unit up and 2 units back
-            // +z is out of the screen
-            transform: transform::Transform{
-                position: Point3 {
-                    x: 0.0, y: 1.0, z: 2.0,
-                },
-                rotation: Quaternion::one(),
-                scale: Vector3{ x: 1.0, y: 1.0, z: 1.0 },
-            },
-            aspect: config.width as f32 / config.height as f32,
-            fovy: 45.0,
-            znear: 0.1,
-            zfar: 100.0,
-        };
-
         let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        //camera_uniform.update_view_proj(&camera); TODO redo
 
         let camera_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -102,6 +90,8 @@ impl<'a> Renderer<'a> {
 
         let depth_texture = texture::Texture::create_depth_texture(&device, &post_proc.input_texture.texture, "depth_texture");
 
+        let mut models = vec![];
+
         let model_fut = load_model("cube/cube.obj", &device, &queue, &texture_bind_group_layout);
         let model = pollster::block_on(model_fut)
             .expect("coulnd't load model");
@@ -109,24 +99,21 @@ impl<'a> Renderer<'a> {
         let voxel_chunk = VoxelChunk::new();
         let voxels = voxel_chunk.get_model(&device, &queue, &texture_bind_group_layout).unwrap();
 
-        let scene = Scene { models: vec![
-            model,
-            voxels,
-        ] };
-
+        models.push(voxels);
 
         Self {
+            window,
+            scene,
+            models,
+
             surface,
             device,
             queue,
             config,
             size,
-            window: window_arc,
             render_pipeline,
             post_proc,
             camera_bind_group,
-            scene,
-            camera,
             camera_uniform,
             camera_buffer,
             depth_texture,
@@ -463,7 +450,7 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.camera_uniform.update_view_proj(&self.camera);
+        self.camera_uniform.update_view_proj(&self.scene.read().unwrap());
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
 
         let output = self.surface.get_current_texture().unwrap();
@@ -506,8 +493,12 @@ impl<'a> Renderer<'a> {
 
             render_pass.set_pipeline(&self.render_pipeline);
             // render scene
-            self.scene.draw_scene(&mut render_pass, &self.camera_bind_group)
+            self.scene.read().unwrap().draw_scene(&mut render_pass, &self.camera_bind_group)
                 .expect("couldn't draw mesh");
+
+            for i in 0..self.models.len() {
+                self.models.get(i).unwrap().draw_model(&mut render_pass, &self.camera_bind_group).unwrap();
+            }
         }
         
         {

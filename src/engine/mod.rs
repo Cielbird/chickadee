@@ -7,4 +7,6 @@ pub mod model;
 pub mod scene;
 pub mod resources;
 pub mod transform;
+pub mod entity;
+pub mod component;
 pub mod voxels;

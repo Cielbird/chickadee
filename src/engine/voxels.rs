@@ -107,16 +107,15 @@ impl VoxelChunk {
         let mut indices: Vec<i32> = vec![];
         let mut num_verts = 0;
 
-        Self::add_voxel_face(&mut vertices, &mut indices, &mut num_verts, FaceDir::Y_POS, Point3 { x: 2., y: 0., z: 0. });
-        // for i in 0..CHUNK_SIZE {
-        //     for j in 0..CHUNK_SIZE {
-        //         for k in 0..CHUNK_SIZE {
-        //             if self.voxels[i][j][k] == VoxelState::FULL {
-        //                 self.add_voxel_faces(&mut vertices, &mut indices, &mut num_verts, Point3 { x: i, y: j, z: k });
-        //             }
-        //         }
-        //     }     
-        // }
+        for i in 0..CHUNK_SIZE {
+            for j in 0..CHUNK_SIZE {
+                for k in 0..CHUNK_SIZE {
+                    if self.voxels[i][j][k] == VoxelState::FULL {
+                        self.add_voxel_faces(&mut vertices, &mut indices, &mut num_verts, Point3 { x: i, y: j, z: k });
+                    }
+                }
+            }     
+        }
         
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor{

@@ -1,15 +1,20 @@
-use cgmath::Transform;
+use std::sync::{Arc, Mutex, RwLock, Weak};
 
-use super::transform::{self};
+use cgmath::{Matrix4, Transform, Zero};
+use winit::event::WindowEvent;
+
+use super::{component::Component, entity::{self, Entity}, scene::Scene, transform::{self}};
 
 
 pub struct Camera {
-    pub transform: transform::Transform,
-    pub aspect: f32,
-    pub fovy: f32,
-    pub znear: f32,
-    pub zfar: f32,
+    entity: Option<Weak<RwLock<Entity>>>,
+
+    aspect: f32,
+    fovy: f32,
+    znear: f32,
+    zfar: f32,
 }
+
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -27,8 +32,14 @@ impl CameraUniform {
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Camera) {
-        self.view_proj = camera.build_view_projection_matrix().into();
+    pub fn update_view_proj(&mut self, scene: &Scene) {
+        if let Some(cam) = scene.find_first_component::<Camera>() {
+            if let Ok(cam) = cam.read() {
+                self.view_proj = cam.get_view_projection_matrix().into();
+            }
+        } else {
+            println!("No camera in scene!");
+        }
     }
 }
  
@@ -42,10 +53,61 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
+impl Component for Camera {
+    fn get_entity(&self) -> Option<Arc<RwLock<Entity>>> {
+        if let Some(e) = &self.entity {
+            return Some(e.upgrade().unwrap());
+        }
+        return None
+    }
+
+    fn set_entity(&mut self, entity: &Arc<RwLock<Entity>>) {
+        self.entity = Some(Arc::downgrade(entity));
+    }
+
+    fn on_start(&mut self, scene: &mut Scene) {
+        return;
+    }
+
+    fn on_update(&mut self, scene: &mut Scene) {
+        return;
+    }
+
+    fn on_event(&mut self, scene: &mut Scene, event: &WindowEvent) {
+        return;
+    }
+}
+
 impl Camera {
-    fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+    pub fn new() -> Self {
+        Camera {
+            entity: None,
+            // position the camera 1 unit up and 2 units back
+            // +z is out of the screen
+            // transform: transform::Transform{
+            //     position: Point3 {
+            //         x: 0.0, y: 1.0, z: 2.0,
+            //     },
+            //     rotation: Quaternion::one(),
+            //     scale: Vector3{ x: 1.0, y: 1.0, z: 1.0 },
+            // },
+            aspect: 1.,//config.width as f32 / config.height as f32,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        }
+    }
+
+    fn get_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        return OPENGL_TO_WGPU_MATRIX * proj * self.transform.matrix().inverse_transform().unwrap();
+        if let Some(entity) = self.get_entity() {
+            if let Ok(entity) = entity.read() {
+                let transform = entity.get_tranform();
+                return OPENGL_TO_WGPU_MATRIX * proj * transform.matrix().inverse_transform().unwrap();
+            }
+        }
+        
+        Matrix4::zero()
     }
 }
 

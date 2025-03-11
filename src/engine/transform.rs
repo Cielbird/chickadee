@@ -1,4 +1,6 @@
-use cgmath::{EuclideanSpace, Euler, InnerSpace, Matrix, Matrix3, Matrix4, One, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
+use std::sync::{Arc, Mutex};
+
+use cgmath::{point3, EuclideanSpace, Euler, InnerSpace, Matrix, Matrix3, Matrix4, One, Point3, Quaternion, Rad, Rotation, Rotation3, Vector3, Zero};
 
 use cgmath::Transform as CgTransform;
 
@@ -16,6 +18,15 @@ impl Transform {
 
         self.rotation = z_rotation * y_rotation * x_rotation;
     }
+
+    pub fn zero() -> Self {
+        Self {
+            position: point3(0., 0., 0.),
+            rotation: Quaternion::one(),
+            scale: Vector3::zero(),
+        }
+    }
+
 
     fn forward(&self) -> Vector3<f32> {
         let rotation = Matrix4::from(self.rotation);
