@@ -1,9 +1,6 @@
 use wgpu::BindGroup;
 
-use super::{
-    texture,
-    error::*,
-};
+use super::{error::*, texture};
 
 pub trait Vertex {
     fn desc() -> wgpu::VertexBufferLayout<'static>;
@@ -51,13 +48,20 @@ impl Vertex for ModelVertex {
 }
 
 impl Model {
-    pub fn draw_mesh(&self, mesh_index: usize, 
-        render_pass: &mut wgpu::RenderPass, camera_bind_group: &BindGroup
+    pub fn draw_mesh(
+        &self,
+        mesh_index: usize,
+        render_pass: &mut wgpu::RenderPass,
+        camera_bind_group: &BindGroup,
     ) -> Result<()> {
-        let mesh = self.meshes.get(mesh_index)
+        let mesh = self
+            .meshes
+            .get(mesh_index)
             .ok_or(Error::Other("Invalid mesh index".to_string()))?;
 
-        let material = self.materials.get(mesh.material)
+        let material = self
+            .materials
+            .get(mesh.material)
             .ok_or(Error::Other("Invalid mesh index".to_string()))?;
 
         render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
@@ -71,7 +75,9 @@ impl Model {
     }
 
     pub fn draw_model(
-        &self, render_pass: &mut wgpu::RenderPass, camera_bind_group: &wgpu::BindGroup
+        &self,
+        render_pass: &mut wgpu::RenderPass,
+        camera_bind_group: &wgpu::BindGroup,
     ) -> Result<()> {
         for i in 0..self.meshes.len() {
             self.draw_mesh(i, render_pass, camera_bind_group)?;
@@ -79,4 +85,3 @@ impl Model {
         Ok(())
     }
 }
- 

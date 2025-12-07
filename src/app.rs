@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::camera_controller::CameraController;
 use crate::engine::engine::Engine;
 
 use winit::application::ApplicationHandler;
@@ -14,9 +13,7 @@ pub struct Application<'a> {
 
 impl<'a> Application<'a> {
     pub fn new() -> Self {
-        Self {
-            engine: None,
-        }
+        Self { engine: None }
     }
 
     pub fn on_start(&mut self) {
@@ -32,10 +29,9 @@ impl<'a> Application<'a> {
     }
 }
 
-impl<'a> ApplicationHandler for Application<'a>{
+impl<'a> ApplicationHandler for Application<'a> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let win_attribs = Window::default_attributes()
-            .with_title("Hello!");
+        let win_attribs = Window::default_attributes().with_title("Hello!");
         let window = event_loop.create_window(win_attribs).unwrap();
         let window_arc = Arc::new(window);
         self.engine = Some(Engine::new(Arc::clone(&window_arc)));
@@ -43,7 +39,12 @@ impl<'a> ApplicationHandler for Application<'a>{
         self.on_start();
     }
 
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        window_id: WindowId,
+        event: WindowEvent,
+    ) {
         if self.engine.is_none() {
             return;
         }
@@ -60,7 +61,7 @@ impl<'a> ApplicationHandler for Application<'a>{
                 }
                 WindowEvent::RedrawRequested => {
                     renderer.render().unwrap();
-                    
+
                     self.on_update();
                 }
                 _ => {

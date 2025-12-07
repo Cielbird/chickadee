@@ -1,9 +1,15 @@
-use std::{any::{Any, TypeId}, sync::{Arc, RwLock, Weak}};
+use std::{
+    any::{Any, TypeId},
+    sync::{Arc, RwLock, Weak},
+};
 
 use winit::event::WindowEvent;
 
-use super::{component::Component, scene::Scene, transform::{self, Transform}};
-
+use super::{
+    component::Component,
+    scene::Scene,
+    transform::{self, Transform},
+};
 
 pub struct Entity {
     components: Vec<Arc<dyn Any + Send + Sync>>,
@@ -42,8 +48,9 @@ impl Entity {
         entity.write().unwrap().components.push(c);
     }
 
-    pub fn find_first_component<C>(&self) -> Option<Arc<RwLock<C>>> 
-        where C: Component 
+    pub fn find_first_component<C>(&self) -> Option<Arc<RwLock<C>>>
+    where
+        C: Component,
     {
         for c in &self.components {
             if let Ok(c) = c.clone().downcast::<RwLock<C>>() {
@@ -52,7 +59,7 @@ impl Entity {
                 println!("Failed to downcast");
             }
         }
-        
+
         None
     }
 
@@ -88,13 +95,13 @@ impl Entity {
 }
 
 pub struct EntityIterator {
-    stack: Vec<Arc<RwLock<Entity>>>,  // nodes to visit
+    stack: Vec<Arc<RwLock<Entity>>>, // nodes to visit
 }
 
 impl EntityIterator {
     pub fn new(root: Arc<RwLock<Entity>>) -> Self {
         let mut stack = Vec::new();
-        stack.push(root);  // Start with the root node
+        stack.push(root); // Start with the root node
         EntityIterator { stack }
     }
 }
@@ -110,7 +117,7 @@ impl Iterator for EntityIterator {
             }
             Some(entity)
         } else {
-            None  // No more nodes to visit
+            None // No more nodes to visit
         }
     }
 }

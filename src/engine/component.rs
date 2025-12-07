@@ -1,9 +1,11 @@
-use std::{any::Any, sync::{Arc, RwLock, Weak}};
+use std::{
+    any::Any,
+    sync::{Arc, RwLock, Weak},
+};
 
 use winit::event::WindowEvent;
 
 use super::{entity::Entity, scene::Scene};
-
 
 pub trait Component: Send + Sync + 'static {
     fn get_entity(&self) -> Option<Arc<RwLock<Entity>>>;

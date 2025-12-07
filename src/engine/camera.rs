@@ -1,10 +1,9 @@
-use std::sync::{Arc, Mutex, RwLock, Weak};
+use std::sync::{Arc, RwLock, Weak};
 
 use cgmath::{Matrix4, Transform, Zero};
 use winit::event::WindowEvent;
 
-use super::{component::Component, entity::{self, Entity}, scene::Scene, transform::{self}};
-
+use super::{component::Component, entity::Entity, scene::Scene};
 
 pub struct Camera {
     entity: Option<Weak<RwLock<Entity>>>,
@@ -14,7 +13,6 @@ pub struct Camera {
     znear: f32,
     zfar: f32,
 }
-
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -42,7 +40,6 @@ impl CameraUniform {
         }
     }
 }
- 
 
 // necessary because cgmath uses opengl style coords, and wgpu uses directx style coords
 #[rustfmt::skip]
@@ -58,7 +55,7 @@ impl Component for Camera {
         if let Some(e) = &self.entity {
             return Some(e.upgrade().unwrap());
         }
-        return None
+        return None;
     }
 
     fn set_entity(&mut self, entity: &Arc<RwLock<Entity>>) {
@@ -91,7 +88,7 @@ impl Camera {
             //     rotation: Quaternion::one(),
             //     scale: Vector3{ x: 1.0, y: 1.0, z: 1.0 },
             // },
-            aspect: 1.,//config.width as f32 / config.height as f32,
+            aspect: 1., //config.width as f32 / config.height as f32,
             fovy: 45.0,
             znear: 0.1,
             zfar: 100.0,
@@ -103,11 +100,12 @@ impl Camera {
         if let Some(entity) = self.get_entity() {
             if let Ok(entity) = entity.read() {
                 let transform = entity.get_tranform();
-                return OPENGL_TO_WGPU_MATRIX * proj * transform.matrix().inverse_transform().unwrap();
+                return OPENGL_TO_WGPU_MATRIX
+                    * proj
+                    * transform.matrix().inverse_transform().unwrap();
             }
         }
-        
+
         Matrix4::zero()
     }
 }
-

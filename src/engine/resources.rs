@@ -1,6 +1,6 @@
 use std::{
-    io::{BufReader, Cursor}, 
-    path::Path
+    io::{BufReader, Cursor},
+    path::Path,
 };
 
 use wgpu::util::DeviceExt;
@@ -15,7 +15,7 @@ fn load_binary(file_name: &str) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-pub fn load_string(file_name: &str) -> Result<String>{
+pub fn load_string(file_name: &str) -> Result<String> {
     let path = std::path::Path::new(env!("OUT_DIR"))
         .join("res")
         .join(file_name);
@@ -39,7 +39,9 @@ pub async fn load_model(
     layout: &wgpu::BindGroupLayout,
 ) -> Result<model::Model> {
     // path all files for the model will be relative to
-    let parent_path = Path::new(file_name).parent().unwrap_or_else(|| Path::new(""));
+    let parent_path = Path::new(file_name)
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
 
     let obj_text = load_string(file_name)?;
     let obj_cursor = Cursor::new(obj_text);
@@ -61,7 +63,6 @@ pub async fn load_model(
     )
     .await?;
 
-
     let mut materials = Vec::new();
     for m in obj_materials? {
         // texure path is relative to material
@@ -70,7 +71,7 @@ pub async fn load_model(
         println!("{:?}", p);
         let diffuse_texture = load_texture(p, device, queue)?;
         println!("asdf");
-    
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout,
             entries: &[
@@ -96,9 +97,9 @@ pub async fn load_model(
     let meshes = models
         .into_iter()
         .map(|m| {
-                let vertices = (0..m.mesh.positions.len() / 3)
+            let vertices = (0..m.mesh.positions.len() / 3)
                 .map(|i| {
-                    if m.mesh.normals.is_empty(){
+                    if m.mesh.normals.is_empty() {
                         model::ModelVertex {
                             position: [
                                 m.mesh.positions[i * 3],
@@ -108,7 +109,7 @@ pub async fn load_model(
                             uvs: [m.mesh.texcoords[i * 2], 1.0 - m.mesh.texcoords[i * 2 + 1]],
                             normal: [0.0, 0.0, 0.0],
                         }
-                    }else{
+                    } else {
                         model::ModelVertex {
                             position: [
                                 m.mesh.positions[i * 3],
@@ -149,5 +150,3 @@ pub async fn load_model(
 
     Ok(model::Model { meshes, materials })
 }
-
- 

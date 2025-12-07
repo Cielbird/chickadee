@@ -1,7 +1,15 @@
-use std::{sync::Weak, sync::{Arc, RwLock}};
+use std::{
+    sync::Weak,
+    sync::{Arc, RwLock},
+};
 
 use cgmath::{Vector3, Zero};
-use winit::{dpi::PhysicalPosition, event::{ElementState, KeyEvent, WindowEvent}, keyboard::{KeyCode, PhysicalKey}, window::{self, Window}};
+use winit::{
+    dpi::PhysicalPosition,
+    event::{ElementState, KeyEvent, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
+    window::Window,
+};
 
 use crate::engine::{component::Component, entity::Entity, scene::Scene};
 
@@ -9,7 +17,7 @@ use super::engine::camera::Camera;
 
 pub struct CameraController {
     entity: Option<Weak<RwLock<Entity>>>,
-    
+
     walk_speed: f32,
     sprint_speed: f32,
     cam_speed: f32,
@@ -76,7 +84,6 @@ impl CameraController {
             global_move_vec += Vector3::new(0., -1., 0.);
         }
 
-
         if self.is_sprint_pressed {
             move_vec *= self.sprint_speed;
             global_move_vec *= self.sprint_speed;
@@ -87,14 +94,22 @@ impl CameraController {
 
         //camera.transform.move_local(move_vec);
         //camera.transform.move_global(global_move_vec);
-        
+
         // TODO this should be solved with a transform hierachy
 
         // local rotation for the pitch
-        let rotation = Vector3 { x: self.delta_pitch * self.cam_speed, y: 0., z: 0. };
+        let rotation = Vector3 {
+            x: self.delta_pitch * self.cam_speed,
+            y: 0.,
+            z: 0.,
+        };
         //camera.transform.rotate_euler_local(rotation);
         // global rotation for the yaw
-        let rotation = Vector3 { x: 0., y: self.delta_yaw * self.cam_speed, z: 0. };
+        let rotation = Vector3 {
+            x: 0.,
+            y: self.delta_yaw * self.cam_speed,
+            z: 0.,
+        };
         //camera.transform.rotate_euler_global(rotation);
 
         // reset rotation deltas
@@ -109,12 +124,15 @@ impl CameraController {
     pub fn set_mouse_captured(&mut self, captured: bool) {
         self.mouse_captured = captured;
         let mode = if self.mouse_captured {
-                winit::window::CursorGrabMode::Locked
-            } else {
-                winit::window::CursorGrabMode::None
-            };
+            winit::window::CursorGrabMode::Locked
+        } else {
+            winit::window::CursorGrabMode::None
+        };
         self.window.as_mut().unwrap().set_cursor_grab(mode).ok();
-        self.window.as_mut().unwrap().set_cursor_visible(!self.mouse_captured);
+        self.window
+            .as_mut()
+            .unwrap()
+            .set_cursor_visible(!self.mouse_captured);
     }
 }
 
@@ -123,16 +141,14 @@ impl Component for CameraController {
         if let Some(e) = &self.entity {
             return Some(e.upgrade().unwrap());
         }
-        return None
+        return None;
     }
 
     fn set_entity(&mut self, entity: &Arc<RwLock<Entity>>) {
         self.entity = Some(Arc::downgrade(entity));
     }
 
-    fn on_start(&mut self, scene: &mut Scene) {
-
-    }
+    fn on_start(&mut self, scene: &mut Scene) {}
 
     fn on_update(&mut self, scene: &mut Scene) {
         let cam_ptr = scene.find_first_component::<Camera>();
@@ -153,7 +169,8 @@ impl Component for CameraController {
                 ..
             } => {
                 let is_pressed = *state == ElementState::Pressed;
-                match keycode {KeyCode::KeyW | KeyCode::ArrowUp => {
+                match keycode {
+                    KeyCode::KeyW | KeyCode::ArrowUp => {
                         self.is_forward_pressed = is_pressed;
                     }
                     KeyCode::KeyA | KeyCode::ArrowLeft => {
@@ -179,12 +196,10 @@ impl Component for CameraController {
                             self.toggle_mouse_captured();
                         }
                     }
-                    _ => { },
+                    _ => {}
                 }
             }
-            WindowEvent::CursorMoved { 
-                position, .. 
-            } if self.mouse_captured => {
+            WindowEvent::CursorMoved { position, .. } if self.mouse_captured => {
                 let (x, y) = (position.x as f32, position.y as f32);
                 let window = self.window.as_mut().unwrap();
                 let center_x = window.inner_size().width as f32 / 2.;
@@ -194,9 +209,11 @@ impl Component for CameraController {
                 self.delta_pitch = y - center_y;
 
                 // Reset cursor to center
-                window.set_cursor_position(PhysicalPosition::new(center_x, center_y)).ok();
+                window
+                    .set_cursor_position(PhysicalPosition::new(center_x, center_y))
+                    .ok();
             }
-            _ => { },
+            _ => {}
         }
     }
 }

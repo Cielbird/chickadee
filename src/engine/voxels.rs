@@ -1,10 +1,10 @@
-use cgmath::{Point3};
-use noise::{NoiseFn, Perlin, Seedable};
-use wgpu::{util::DeviceExt, Buffer, Device, Queue};
+use cgmath::Point3;
+use noise::{NoiseFn, Perlin};
+use wgpu::{util::DeviceExt, Device, Queue};
 
 use super::{
     error::*,
-    model::{self, Mesh, Model, ModelVertex, Vertex}
+    model::{self, Mesh, Model, ModelVertex},
 };
 
 use crate::engine::resources::load_texture;
@@ -21,7 +21,6 @@ enum VoxelState {
     EMPTY,
     FULL,
 }
-
 
 #[derive(Debug)]
 enum FaceDir {
@@ -45,7 +44,7 @@ impl VoxelChunk {
     pub fn new() -> Self {
         let mut chunk = VoxelChunk {
             voxels: [[[VoxelState::EMPTY; CHUNK_SIZE]; CHUNK_SIZE]; CHUNK_SIZE],
-            chunk_pos: Point3::<i32>::new(0, 0, 0)
+            chunk_pos: Point3::<i32>::new(0, 0, 0),
         };
 
         let perlin = Perlin::new(20);
@@ -62,13 +61,15 @@ impl VoxelChunk {
                         chunk.voxels[x][y][z] = VoxelState::FULL;
                     }
                 }
-            }     
+            }
         }
         chunk
     }
 
-    pub fn get_model(&self, 
-        device: &Device, queue: &Queue, 
+    pub fn get_model(
+        &self,
+        device: &Device,
+        queue: &Queue,
         layout: &wgpu::BindGroupLayout,
     ) -> Result<Model> {
         let mesh = self.get_mesh(device)?;
@@ -89,7 +90,7 @@ impl VoxelChunk {
             ],
             label: None,
         });
-        
+
         let material = model::Material {
             name: "Voxel Material".to_string(),
             diffuse_texture,
@@ -111,27 +112,28 @@ impl VoxelChunk {
             for j in 0..CHUNK_SIZE {
                 for k in 0..CHUNK_SIZE {
                     if self.voxels[i][j][k] == VoxelState::FULL {
-                        self.add_voxel_faces(&mut vertices, &mut indices, &mut num_verts, Point3 { x: i, y: j, z: k });
+                        self.add_voxel_faces(
+                            &mut vertices,
+                            &mut indices,
+                            &mut num_verts,
+                            Point3 { x: i, y: j, z: k },
+                        );
                     }
                 }
-            }     
+            }
         }
-        
-        let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor{
-                label: Some("Some Vertex Buffer"),
-                contents: bytemuck::cast_slice(vertices.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
 
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor{
-                label: Some("Some index Buffer"),
-                contents: bytemuck::cast_slice(indices.as_slice()),
-                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Some Vertex Buffer"),
+            contents: bytemuck::cast_slice(vertices.as_slice()),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Some index Buffer"),
+            contents: bytemuck::cast_slice(indices.as_slice()),
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+        });
 
         let mesh = Mesh {
             name: "Voxel Mesh".to_string(),
@@ -145,8 +147,11 @@ impl VoxelChunk {
         Ok(mesh)
     }
 
-    fn add_voxel_faces(&self, 
-        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<i32>, num_verts: &mut usize,
+    fn add_voxel_faces(
+        &self,
+        vertices: &mut Vec<ModelVertex>,
+        indices: &mut Vec<i32>,
+        num_verts: &mut usize,
         voxel_indices: cgmath::Point3<usize>,
     ) {
         // indices in chunck
@@ -188,10 +193,13 @@ impl VoxelChunk {
     }
 
     fn add_voxel_face(
-        vertices: &mut Vec<ModelVertex>, indices: &mut Vec<i32>, num_verts: &mut usize,
-        facing_dir: FaceDir, origin: Point3<f32>
+        vertices: &mut Vec<ModelVertex>,
+        indices: &mut Vec<i32>,
+        num_verts: &mut usize,
+        facing_dir: FaceDir,
+        origin: Point3<f32>,
     ) {
-        let d_uv = (TEX_FACE_SIZE as f32)/(TEX_SIZE as f32);
+        let d_uv = (TEX_FACE_SIZE as f32) / (TEX_SIZE as f32);
         let x = origin.x;
         let y = origin.y;
         let z = origin.z;
@@ -370,9 +378,9 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            _ => return
+            _ => return,
         }
-        
+
         let first_index = *num_verts as i32;
         indices.push(first_index);
         indices.push(first_index + 1);
