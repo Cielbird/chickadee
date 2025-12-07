@@ -2,6 +2,8 @@ use std::{path::Component, sync::{Arc, RwLock}};
 
 use winit::{event::WindowEvent, window::Window};
 
+use crate::camera_controller::CameraController;
+
 use super::{camera::Camera, entity::{Entity}, renderer::Renderer, scene::Scene, transform::Transform};
 
 pub struct Engine<'a> {
@@ -11,15 +13,22 @@ pub struct Engine<'a> {
 
 impl<'a> Engine<'a> {
     pub fn new(window: Arc<Window>) -> Self {
-        let mut scene = Scene::new();
+        let scene = Scene::new();
 
         let root = scene.get_root();
+
+        // let voxels = Entity::add_child(&root);
+        // Entity::add_component(&voxels, component);
 
         let player = Entity::add_child(&root);
 
         let player_cam = Entity::add_child(&player);
         let camera = Camera::new();
         Entity::add_component::<Camera>(&player_cam, camera);
+
+        let mut camera_ctrl = CameraController::new(1.);
+        camera_ctrl.window = Some(window.clone());
+        Entity::add_component::<CameraController>(&player_cam, camera_ctrl);
 
         let scene = Arc::new(RwLock::new(scene));
         let renderer = Renderer::new(window, scene.clone());

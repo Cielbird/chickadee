@@ -11,7 +11,7 @@ use winit::{
     window::Window,
 };
 
-use crate::engine::{component::Component, entity::Entity, scene::Scene};
+use crate::engine::{component::{Component, ComponentRef}, entity::Entity, scene::Scene};
 
 use super::engine::camera::Camera;
 
@@ -56,7 +56,7 @@ impl CameraController {
         }
     }
 
-    pub fn update_camera(&mut self, camera: &mut Camera) {
+    pub fn update_camera(&mut self, mut camera: ComponentRef<Camera>) {
         // Prevents glitching when the camera gets too close to the
         // center of the scene.
         let mut move_vec = Vector3::<f32>::zero();
@@ -92,8 +92,9 @@ impl CameraController {
             global_move_vec *= self.walk_speed;
         }
 
-        //camera.transform.move_local(move_vec);
-        //camera.transform.move_global(global_move_vec);
+        let mut camera = camera.get_mut().unwrap();
+        camera.transform.move_local(move_vec);
+        camera.transform.move_global(global_move_vec);
 
         // TODO this should be solved with a transform hierachy
 
@@ -103,14 +104,14 @@ impl CameraController {
             y: 0.,
             z: 0.,
         };
-        //camera.transform.rotate_euler_local(rotation);
+        camera.transform.rotate_euler_local(rotation);
         // global rotation for the yaw
         let rotation = Vector3 {
             x: 0.,
             y: self.delta_yaw * self.cam_speed,
             z: 0.,
         };
-        //camera.transform.rotate_euler_global(rotation);
+        camera.transform.rotate_euler_global(rotation);
 
         // reset rotation deltas
         self.delta_yaw = 0.;
@@ -153,7 +154,7 @@ impl Component for CameraController {
     fn on_update(&mut self, scene: &mut Scene) {
         let cam_ptr = scene.find_first_component::<Camera>();
         if let Some(cam_ptr) = cam_ptr {
-            self.update_camera(&mut cam_ptr.write().unwrap())
+            self.update_camera(cam_ptr)
         }
     }
 

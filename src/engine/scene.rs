@@ -4,6 +4,8 @@ use std::{
     sync::{Arc, Mutex, RwLock, Weak},
 };
 
+use crate::engine::component::ComponentRef;
+
 use super::{
     component::Component,
     entity::{Entity, EntityIterator},
@@ -39,11 +41,11 @@ impl Scene {
         Ok(())
     }
 
-    pub fn find_first_component<C: Component>(&self) -> Option<Arc<RwLock<C>>> {
+    pub fn find_first_component<C: Component>(&self) -> Option<ComponentRef<C>> {
         for entity in self.get_entity_iter() {
             if let Ok(entity) = entity.read() {
                 if let Some(component) = entity.find_first_component() {
-                    return Some(component.clone());
+                    return Some(component);
                 }
             }
         }

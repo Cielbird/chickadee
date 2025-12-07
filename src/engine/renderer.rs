@@ -111,6 +111,7 @@ impl<'a> Renderer<'a> {
             .unwrap();
 
         models.push(voxels);
+        models.push(model);
 
         Self {
             window,

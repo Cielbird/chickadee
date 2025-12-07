@@ -20,11 +20,12 @@ impl Transform {
         self.rotation = z_rotation * y_rotation * x_rotation;
     }
 
-    pub fn zero() -> Self {
+    /// The identity transform: T(x) = x
+    pub fn identity() -> Self {
         Self {
             position: point3(0., 0., 0.),
             rotation: Quaternion::one(),
-            scale: Vector3::zero(),
+            scale: Vector3::new(1., 1., 1.),
         }
     }
 

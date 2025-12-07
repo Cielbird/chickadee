@@ -5,6 +5,8 @@ use std::{
 
 use winit::event::WindowEvent;
 
+use crate::engine::component::{ComponentRef, DynComponentRef};
+
 use super::{
     component::Component,
     scene::Scene,
@@ -12,7 +14,7 @@ use super::{
 };
 
 pub struct Entity {
-    components: Vec<Arc<dyn Any + Send + Sync>>,
+    components: Vec<DynComponentRef>,
     transform: Transform,
     parent: Option<Weak<RwLock<Entity>>>,
     children: Vec<Arc<RwLock<Entity>>>,
@@ -22,7 +24,7 @@ impl Entity {
     pub fn new() -> Self {
         Self {
             components: vec![],
-            transform: Transform::zero(),
+            transform: Transform::identity(),
             parent: None,
             children: vec![],
         }
@@ -42,21 +44,21 @@ impl Entity {
         child
     }
 
-    pub fn add_component<C: Component>(entity: &Arc<RwLock<Entity>>, component: C) {
-        let c = Arc::new(RwLock::new(component));
-        c.write().unwrap().set_entity(entity);
+    pub fn add_component<C: Component>(entity: &Arc<RwLock<Entity>>, mut component: C) {
+        component.set_entity(&entity);
+        let c = DynComponentRef::new(component);
         entity.write().unwrap().components.push(c);
     }
 
-    pub fn find_first_component<C>(&self) -> Option<Arc<RwLock<C>>>
+    pub fn find_first_component<C>(&self) -> Option<ComponentRef<C>>
     where
         C: Component,
     {
         for c in &self.components {
-            if let Ok(c) = c.clone().downcast::<RwLock<C>>() {
-                return Some(c);
+            if let Ok(x) = c.clone().try_into() {
+                return Some(x);
             } else {
-                println!("Failed to downcast");
+                panic!("Failed to downcast");
             }
         }
 
@@ -65,31 +67,19 @@ impl Entity {
 
     pub fn on_start(&mut self, scene: &mut Scene) {
         for c in &self.components {
-            if let Some(c) = c.downcast_ref::<Arc<RwLock<dyn Component>>>() {
-                c.write().unwrap().on_start(scene);
-            } else {
-                println!("Failed to downcast to component");
-            }
+            c.on_start(scene);
         }
     }
 
     pub fn on_update(&mut self, scene: &mut Scene) {
         for c in &self.components {
-            if let Some(c) = c.downcast_ref::<Arc<RwLock<dyn Component>>>() {
-                c.write().unwrap().on_update(scene);
-            } else {
-                println!("Failed to downcast to component");
-            }
+            c.on_update(scene);
         }
     }
 
     pub fn on_event(&mut self, scene: &mut Scene, event: &WindowEvent) {
         for c in &self.components {
-            if let Some(c) = c.downcast_ref::<Arc<RwLock<dyn Component>>>() {
-                c.write().unwrap().on_event(scene, event);
-            } else {
-                println!("Failed to downcast to component");
-            }
+            c.on_event(scene, event);
         }
     }
 }

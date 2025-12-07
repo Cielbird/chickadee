@@ -1,12 +1,16 @@
 use std::sync::{Arc, RwLock, Weak};
 
-use cgmath::{Matrix4, Transform, Zero};
+use cgmath::{Matrix4, One, Point3, Quaternion, Transform, Vector3, Zero};
 use winit::event::WindowEvent;
+
+use crate::engine::transform;
 
 use super::{component::Component, entity::Entity, scene::Scene};
 
 pub struct Camera {
     entity: Option<Weak<RwLock<Entity>>>,
+
+    pub transform: transform::Transform,
 
     aspect: f32,
     fovy: f32,
@@ -32,7 +36,7 @@ impl CameraUniform {
 
     pub fn update_view_proj(&mut self, scene: &Scene) {
         if let Some(cam) = scene.find_first_component::<Camera>() {
-            if let Ok(cam) = cam.read() {
+            if let Ok(cam) = cam.get_ref() {
                 self.view_proj = cam.get_view_projection_matrix().into();
             }
         } else {
@@ -81,13 +85,13 @@ impl Camera {
             entity: None,
             // position the camera 1 unit up and 2 units back
             // +z is out of the screen
-            // transform: transform::Transform{
-            //     position: Point3 {
-            //         x: 0.0, y: 1.0, z: 2.0,
-            //     },
-            //     rotation: Quaternion::one(),
-            //     scale: Vector3{ x: 1.0, y: 1.0, z: 1.0 },
-            // },
+            transform: transform::Transform{
+                position: Point3 {
+                    x: 0.0, y: 1.0, z: 2.0,
+                },
+                rotation: Quaternion::one(),
+                scale: Vector3{ x: 1.0, y: 1.0, z: 1.0 },
+            },
             aspect: 1., //config.width as f32 / config.height as f32,
             fovy: 45.0,
             znear: 0.1,
