@@ -1,17 +1,16 @@
 use std::sync::{Arc, RwLock};
 
-use cgmath::{One, Point3, Quaternion, Vector3, Zero};
 use pollster::FutureExt;
-use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device, Texture};
+use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
 use super::{
-    camera::{Camera, CameraUniform},
+    camera::CameraUniform,
     model::{Model, ModelVertex, Vertex},
     resources::load_model,
     scene::Scene,
-    texture, transform,
+    texture,
     voxels::VoxelChunk,
 };
 
@@ -73,8 +72,7 @@ impl<'a> Renderer<'a> {
         // how should textures be bound to the shader
         let texture_bind_group_layout = Self::create_texture_bind_group_layout(&device);
 
-        let mut camera_uniform = CameraUniform::new();
-        //camera_uniform.update_view_proj(&camera); TODO redo
+        let camera_uniform = CameraUniform::new();
 
         let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
@@ -460,8 +458,6 @@ impl<'a> Renderer<'a> {
         self.config.height = new_size.height;
 
         self.surface.configure(&self.device, &self.config);
-
-        println!("Resized to {:?} from state!", new_size);
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

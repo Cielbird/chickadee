@@ -1,10 +1,13 @@
 use cgmath::{
     point3, EuclideanSpace, InnerSpace, Matrix3, Matrix4, One, Point3, Quaternion, Rad, Rotation3,
-    Vector3, Zero,
+    Vector3,
 };
 
 use cgmath::Transform as CgTransform;
 
+/// 
+/// +z is out of the screen
+#[derive(Debug, Clone)]
 pub struct Transform {
     pub position: Point3<f32>,
     pub rotation: Quaternion<f32>,

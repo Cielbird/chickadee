@@ -1,7 +1,4 @@
-use std::{
-    sync::Weak,
-    sync::{Arc, RwLock},
-};
+use std::sync::Arc;
 
 use cgmath::{Vector3, Zero};
 use winit::{
@@ -11,13 +8,16 @@ use winit::{
     window::Window,
 };
 
-use crate::engine::{component::{Component, ComponentRef}, entity::Entity, scene::Scene};
+use crate::engine::{
+    component::{Component, ComponentRef},
+    event::{OnEventContext, OnStartContext, OnUpdateContext},
+    scene::Scene,
+    transform::Transform,
+};
 
 use super::engine::camera::Camera;
 
 pub struct CameraController {
-    entity: Option<Weak<RwLock<Entity>>>,
-
     walk_speed: f32,
     sprint_speed: f32,
     cam_speed: f32,
@@ -37,8 +37,6 @@ pub struct CameraController {
 impl CameraController {
     pub fn new(speed: f32) -> Self {
         Self {
-            entity: None,
-
             walk_speed: 0.01,
             sprint_speed: 0.05,
             cam_speed: 0.001,
@@ -56,7 +54,7 @@ impl CameraController {
         }
     }
 
-    pub fn update_camera(&mut self, mut camera: ComponentRef<Camera>) {
+    pub fn update_camera(&mut self, camera_transform: &mut Transform) {
         // Prevents glitching when the camera gets too close to the
         // center of the scene.
         let mut move_vec = Vector3::<f32>::zero();
@@ -92,9 +90,8 @@ impl CameraController {
             global_move_vec *= self.walk_speed;
         }
 
-        let mut camera = camera.get_mut().unwrap();
-        camera.transform.move_local(move_vec);
-        camera.transform.move_global(global_move_vec);
+        camera_transform.move_local(move_vec);
+        camera_transform.move_global(global_move_vec);
 
         // TODO this should be solved with a transform hierachy
 
@@ -104,14 +101,14 @@ impl CameraController {
             y: 0.,
             z: 0.,
         };
-        camera.transform.rotate_euler_local(rotation);
+        camera_transform.rotate_euler_local(rotation);
         // global rotation for the yaw
         let rotation = Vector3 {
             x: 0.,
             y: self.delta_yaw * self.cam_speed,
             z: 0.,
         };
-        camera.transform.rotate_euler_global(rotation);
+        camera_transform.rotate_euler_global(rotation);
 
         // reset rotation deltas
         self.delta_yaw = 0.;
@@ -138,28 +135,18 @@ impl CameraController {
 }
 
 impl Component for CameraController {
-    fn get_entity(&self) -> Option<Arc<RwLock<Entity>>> {
-        if let Some(e) = &self.entity {
-            return Some(e.upgrade().unwrap());
-        }
-        return None;
-    }
+    fn on_start(&mut self, scene: &mut Scene, context: OnStartContext) {}
 
-    fn set_entity(&mut self, entity: &Arc<RwLock<Entity>>) {
-        self.entity = Some(Arc::downgrade(entity));
-    }
-
-    fn on_start(&mut self, scene: &mut Scene) {}
-
-    fn on_update(&mut self, scene: &mut Scene) {
-        let cam_ptr = scene.find_first_component::<Camera>();
-        if let Some(cam_ptr) = cam_ptr {
-            self.update_camera(cam_ptr)
+    fn on_update(&mut self, scene: &mut Scene, context: OnUpdateContext) {
+        if let Some((cam_comp_id, _cam_ptr)) = scene.find_first_component::<Camera>() {
+            let cam = scene.get_entity(&cam_comp_id).unwrap().clone();
+            let cam_transform = scene.get_tranform_mut(&cam).unwrap();
+            self.update_camera(cam_transform);
         }
     }
 
-    fn on_event(&mut self, scene: &mut Scene, event: &WindowEvent) {
-        match event {
+    fn on_event(&mut self, scene: &mut Scene, context: OnEventContext) {
+        match context.event {
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
@@ -169,7 +156,7 @@ impl Component for CameraController {
                     },
                 ..
             } => {
-                let is_pressed = *state == ElementState::Pressed;
+                let is_pressed = state == ElementState::Pressed;
                 match keycode {
                     KeyCode::KeyW | KeyCode::ArrowUp => {
                         self.is_forward_pressed = is_pressed;
@@ -193,7 +180,7 @@ impl Component for CameraController {
                         self.is_sprint_pressed = is_pressed;
                     }
                     KeyCode::Escape => {
-                        if *state == ElementState::Pressed {
+                        if state == ElementState::Pressed {
                             self.toggle_mouse_captured();
                         }
                     }

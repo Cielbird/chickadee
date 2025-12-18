@@ -3,17 +3,14 @@ use std::{
     sync::{Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use winit::event::WindowEvent;
+use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
 
-use super::{entity::Entity, scene::Scene};
+use super::super::scene::Scene;
 
 pub trait Component: Any + Send + Sync + 'static {
-    fn get_entity(&self) -> Option<Arc<RwLock<Entity>>>;
-    fn set_entity(&mut self, entity: &Arc<RwLock<Entity>>);
-
-    fn on_start(&mut self, scene: &mut Scene);
-    fn on_update(&mut self, scene: &mut Scene);
-    fn on_event(&mut self, scene: &mut Scene, event: &WindowEvent);
+    fn on_start(&mut self, scene: &mut Scene, context: OnStartContext);
+    fn on_update(&mut self, scene: &mut Scene, context: OnUpdateContext);
+    fn on_event(&mut self, scene: &mut Scene, context: OnEventContext);
 }
 
 #[derive(Clone)]
@@ -42,19 +39,19 @@ impl DynComponentRef {
         Self { inner }
     }
 
-    pub fn on_start(&self, scene: &mut Scene) {
+    pub fn on_start(&self, scene: &mut Scene, context: OnStartContext) {
         let mut inner = self.inner.write().unwrap();
-        inner.on_start(scene);
+        inner.on_start(scene, context);
     }
 
-    pub fn on_update(&self, scene: &mut Scene) {
+    pub fn on_update(&self, scene: &mut Scene, context: OnUpdateContext) {
         let mut inner = self.inner.write().unwrap();
-        inner.on_start(scene);
+        inner.on_update(scene, context);
     }
 
-    pub fn on_event(&self, scene: &mut Scene, event: &WindowEvent) {
+    pub fn on_event(&self, scene: &mut Scene, context: OnEventContext) {
         let mut inner = self.inner.write().unwrap();
-        inner.on_event(scene, event);
+        inner.on_event(scene, context);
     }
 
     unsafe fn downcast_unchecked<C: Component>(self) -> ComponentRef<C> {
