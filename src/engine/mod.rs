@@ -11,3 +11,4 @@ pub mod texture;
 pub mod transform;
 pub mod voxels;
 pub mod event;
+pub mod handler;

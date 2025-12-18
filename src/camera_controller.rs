@@ -10,6 +10,7 @@ use winit::{
 
 use crate::engine::{
     component::{Component, ComponentRef},
+    engine::get_engine,
     event::{OnEventContext, OnStartContext, OnUpdateContext},
     scene::Scene,
     transform::Transform,
@@ -21,7 +22,6 @@ pub struct CameraController {
     walk_speed: f32,
     sprint_speed: f32,
     cam_speed: f32,
-    pub window: Option<Arc<Window>>,
     mouse_captured: bool,
     is_forward_pressed: bool,
     is_backward_pressed: bool,
@@ -40,7 +40,6 @@ impl CameraController {
             walk_speed: 0.01,
             sprint_speed: 0.05,
             cam_speed: 0.001,
-            window: None,
             mouse_captured: true,
             is_forward_pressed: false,
             is_backward_pressed: false,
@@ -126,11 +125,11 @@ impl CameraController {
         } else {
             winit::window::CursorGrabMode::None
         };
-        self.window.as_mut().unwrap().set_cursor_grab(mode).ok();
-        self.window
-            .as_mut()
-            .unwrap()
-            .set_cursor_visible(!self.mouse_captured);
+        let engine = get_engine();
+        let engine = engine.read().unwrap();
+        let window = engine.get_window();
+        window.set_cursor_grab(mode).ok();
+        window.set_cursor_visible(!self.mouse_captured);
     }
 }
 
@@ -189,7 +188,9 @@ impl Component for CameraController {
             }
             WindowEvent::CursorMoved { position, .. } if self.mouse_captured => {
                 let (x, y) = (position.x as f32, position.y as f32);
-                let window = self.window.as_mut().unwrap();
+                let engine = get_engine();
+                let engine = engine.read().unwrap();
+                let window = engine.get_window();
                 let center_x = window.inner_size().width as f32 / 2.;
                 let center_y = window.inner_size().height as f32 / 2.;
 

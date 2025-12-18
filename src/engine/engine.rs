@@ -1,56 +1,84 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    sync::{Arc, Mutex, MutexGuard, RwLock},
+    thread::JoinHandle,
+};
 
 use winit::{event::WindowEvent, window::Window};
 
-use crate::camera_controller::CameraController;
+use crate::{camera_controller::CameraController, engine::handler::EngineHandler};
 
 use super::{camera::Camera, renderer::Renderer, scene::Scene};
 
-pub struct Engine<'a> {
-    pub renderer: Renderer<'a>,
+use winit::event_loop::EventLoop;
+
+pub struct Engine {
+    pub(crate) renderer: Option<Mutex<Renderer<'static>>>,
+    window: Option<Arc<Window>>,
     scene: Arc<RwLock<Scene>>,
 }
 
-impl<'a> Engine<'a> {
-    pub fn new(window: Arc<Window>) -> Self {
-        let mut scene = Scene::new();
+static ENGINE_INSTANCE: Mutex<Option<Arc<RwLock<Engine>>>> = Mutex::new(None);
 
-        let root = scene.get_root();
+pub fn get_engine() -> Arc<RwLock<Engine>> {
+    let mut instance = ENGINE_INSTANCE.lock().unwrap();
+    if instance.is_none() {
+        let engine = Arc::new(RwLock::new(Engine::new()));
+        *instance = Some(engine);
+    }
+    let instance = instance.clone().unwrap();
+    return instance;
+}
 
-        // let voxels = Entity::add_child(&root);
-        // Entity::add_component(&voxels, component);
-
-        let player = scene
-            .add_entity(root.clone(), "player".to_string())
-            .unwrap();
-
-        let player_cam = scene
-            .add_entity(player.clone(), "player_cam".to_string())
-            .unwrap();
-
-        let camera = Camera::new();
-        scene.add_component(player_cam.clone(), camera).unwrap();
-
-        let mut camera_ctrl = CameraController::new(1.);
-        camera_ctrl.window = Some(window.clone());
-        scene.add_component(player_cam.clone(), camera_ctrl).unwrap();
-
-        let scene = Arc::new(RwLock::new(scene));
-        let renderer = Renderer::new(window, scene.clone());
-        Self { renderer, scene }
+impl Engine {
+    fn new() -> Self {
+        Self {
+            renderer: None,
+            window: None,
+            scene: Arc::new(RwLock::new(Scene::new())),
+        }
     }
 
-    pub fn on_start(&mut self) {
+    pub fn run(scene: Scene) {
+        Self::set_scene(scene);
+        pollster::block_on(async move {
+            let event_loop = EventLoop::new().unwrap();
+
+            let mut window_state = EngineHandler::new();
+
+            let _ = event_loop.run_app(&mut window_state);
+        });
+    }
+
+    pub fn set_window(&mut self, window: Window) {
+        let window = Arc::new(window);
+        self.window = Some(window.clone());
+
+        let renderer = Renderer::new(window, self.scene.clone());
+        self.renderer = Some(Mutex::new(renderer))
+    }
+
+    pub fn get_window(&self) -> Arc<Window> {
+        self.window.clone().unwrap()
+    }
+
+    pub fn set_scene(scene: Scene) {
+        let engine = get_engine();
+        let engine = engine.write().unwrap();
+        let mut s = engine.scene.write().unwrap();
+        *s = scene;
+    }
+
+    pub fn on_start(&self) {
         let scene_ref = &mut self.scene.write().unwrap();
         scene_ref.on_start();
     }
 
-    pub fn on_update(&mut self) {
+    pub fn on_update(&self) {
         let scene_ref = &mut self.scene.write().unwrap();
         scene_ref.on_update();
     }
 
-    pub fn on_event(&mut self, event: &WindowEvent) {
+    pub fn on_event(&self, event: &WindowEvent) {
         let scene_ref = &mut self.scene.write().unwrap();
         scene_ref.on_event(event);
     }

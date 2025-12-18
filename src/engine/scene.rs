@@ -138,8 +138,6 @@ impl Scene {
             // Could be optimized with a haspmap
             if let Ok(x) = comp_ref.clone().try_into() {
                 return Some((comp_id.clone(), x));
-            } else {
-                panic!("Failed to downcast");
             }
         }
 

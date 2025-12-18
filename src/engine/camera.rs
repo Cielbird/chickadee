@@ -58,7 +58,6 @@ impl Component for Camera {
         // update projection matrix from entity's transform
         let camera_transform = scene.get_tranform_ref(&context.entity).unwrap();
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        println!("Camera transform: {:?}", camera_transform);
         self.view_projection_matrix = OPENGL_TO_WGPU_MATRIX
                     * proj
                     * camera_transform.matrix().inverse_transform().unwrap();

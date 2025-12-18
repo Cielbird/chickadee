@@ -1,42 +1,26 @@
-use std::sync::Arc;
-
-use crate::engine::engine::Engine;
+use crate::engine::engine::get_engine;
 
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
 
-pub struct Application<'a> {
-    engine: Option<Engine<'a>>,
-}
+pub struct EngineHandler {}
 
-impl<'a> Application<'a> {
+impl<'a> EngineHandler {
     pub fn new() -> Self {
-        Self { engine: None }
-    }
-
-    pub fn on_start(&mut self) {
-        self.engine.as_mut().unwrap().on_start();
-    }
-
-    pub fn on_update(&mut self) {
-        self.engine.as_mut().unwrap().on_update();
-    }
-
-    pub fn on_event(&mut self, event: &WindowEvent) {
-        self.engine.as_mut().unwrap().on_event(event);
+        Self {}
     }
 }
 
-impl<'a> ApplicationHandler for Application<'a> {
+impl ApplicationHandler for EngineHandler {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let win_attribs = Window::default_attributes().with_title("Hello!");
         let window = event_loop.create_window(win_attribs).unwrap();
-        let window_arc = Arc::new(window);
-        self.engine = Some(Engine::new(Arc::clone(&window_arc)));
-
-        self.on_start();
+        let engine = get_engine();
+        let mut engine = engine.write().unwrap();
+        engine.set_window(window);
+        engine.on_start();
     }
 
     fn window_event(
@@ -45,10 +29,10 @@ impl<'a> ApplicationHandler for Application<'a> {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        if self.engine.is_none() {
-            return;
-        }
-        let renderer = &mut self.engine.as_mut().unwrap().renderer;
+        let engine = get_engine();
+        let engine = engine.read().unwrap();
+        let renderer = engine.renderer.as_ref().unwrap();
+        let mut renderer = renderer.lock().unwrap();
         let window = renderer.window();
 
         if window.id() == window_id {
@@ -62,18 +46,19 @@ impl<'a> ApplicationHandler for Application<'a> {
                 WindowEvent::RedrawRequested => {
                     renderer.render().unwrap();
 
-                    self.on_update();
+                    engine.on_update();
                 }
                 _ => {
-                    self.on_event(&event);
+                    engine.on_event(&event);
                 }
             }
         }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        let renderer = &mut self.engine.as_mut().unwrap().renderer;
-        let window = renderer.window();
+        let engine = get_engine();
+        let engine = engine.read().unwrap();
+        let window = engine.get_window();
         window.request_redraw();
     }
 }

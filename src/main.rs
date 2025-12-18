@@ -1,20 +1,33 @@
-mod app;
 mod camera_controller;
 mod engine;
 
-use app::Application;
-use winit::event_loop::EventLoop;
-
-pub async fn run() {
-    // TODO change how code is written with this gameengine
-    let event_loop = EventLoop::new().unwrap();
-
-    let mut window_state = Application::new();
-
-    let _ = event_loop.run_app(&mut window_state);
-}
+use crate::{
+    camera_controller::CameraController,
+    engine::{camera::Camera, engine::Engine, scene::Scene},
+};
 
 fn main() {
-    // blocking call
-    pollster::block_on(run());
+    let mut scene = Scene::new();
+    let root = scene.get_root();
+
+    // let voxels = Entity::add_child(&root);
+    // Entity::add_component(&voxels, component);
+
+    let player = scene
+        .add_entity(root.clone(), "player".to_string())
+        .unwrap();
+
+    let player_cam = scene
+        .add_entity(player.clone(), "player_cam".to_string())
+        .unwrap();
+
+    let camera = Camera::new();
+    scene.add_component(player_cam.clone(), camera).unwrap();
+
+    let camera_ctrl = CameraController::new(1.);
+    scene
+        .add_component(player_cam.clone(), camera_ctrl)
+        .unwrap();
+
+    Engine::run(scene);
 }
