@@ -28,6 +28,7 @@ impl<C: Component> ComponentRef<C> {
         self.inner.read()
     }
 
+    #[allow(unused)]
     pub fn get_mut<'a>(&'a mut self) -> LockResult<RwLockWriteGuard<'a, C>> {
         self.inner.write()
     }

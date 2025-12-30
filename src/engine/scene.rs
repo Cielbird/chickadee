@@ -1,11 +1,9 @@
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::sync::{Arc, RwLock};
 
 use crate::engine::component::{Component, ComponentId, ComponentRef};
 use crate::engine::entity::Entity;
 use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
-use crate::engine::model::Model;
 use crate::engine::transform::Transform;
 
 use super::{component::DynComponentRef, entity::EntityId};
@@ -58,7 +56,7 @@ impl Scene {
                 // TODO render each model
                 // if let Ok(model) = component.try_into() {
                 //     let model: Model = model;
-                //     model.draw_model(render_pass, camera_bind_group);
+                //     model.draw_model(device, queue, render_pass, camera_bind_group, material_layout);
                 // }
             }
         }
@@ -127,7 +125,7 @@ impl Scene {
         let mut graph = self.entity_graph.write().unwrap();
         let id = graph.add(parent, name)?;
         self.entities.insert(id.clone(), Entity::new());
-        
+
         Ok(id)
     }
 
@@ -141,7 +139,8 @@ impl Scene {
         self.components.insert(component_id.clone(), component_ref);
         self.entities
             .get_mut(&entity)
-            .unwrap().components
+            .unwrap()
+            .components
             .push(component_id.clone());
 
         self.component_entities.insert(component_id, entity);
@@ -163,11 +162,11 @@ impl Scene {
     pub fn get_tranform_ref(&self, entity: &EntityId) -> Option<&Transform> {
         Some(&self.entities.get(&entity)?.transform)
     }
-    
+
     pub fn get_tranform_mut(&mut self, entity: &EntityId) -> Option<&mut Transform> {
         Some(&mut self.entities.get_mut(&entity)?.transform)
     }
-    
+
     pub(crate) fn get_entity(&self, comp_id: &ComponentId) -> Option<&EntityId> {
         self.component_entities.get(comp_id)
     }

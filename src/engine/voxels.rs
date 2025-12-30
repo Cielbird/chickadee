@@ -24,12 +24,12 @@ enum VoxelState {
 #[allow(unused)]
 #[derive(Debug)]
 enum FaceDir {
-    X_POS,
-    X_NEG,
-    Y_POS,
-    Y_NEG,
-    Z_POS,
-    Z_NEG,
+    XPos,
+    XNeg,
+    YPos,
+    YNeg,
+    ZPos,
+    ZNeg,
 }
 
 #[repr(C)]
@@ -139,27 +139,27 @@ impl VoxelChunk {
         };
 
         if k < CHUNK_SIZE - 1 && self.voxels[i][j][k + 1] == VoxelState::EMPTY {
-            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Z_POS, global_pos);
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::ZPos, global_pos);
         }
 
         if j < CHUNK_SIZE - 1 && self.voxels[i][j + 1][k] == VoxelState::EMPTY {
-            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Y_POS, global_pos);
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::YPos, global_pos);
         }
 
         if i < CHUNK_SIZE - 1 && self.voxels[i + 1][j][k] == VoxelState::EMPTY {
-            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::X_POS, global_pos);
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::XPos, global_pos);
         }
 
         if i > 0 && self.voxels[i - 1][j][k] == VoxelState::EMPTY {
-            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::X_NEG, global_pos);
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::XNeg, global_pos);
         }
 
         if j > 0 && self.voxels[i][j - 1][k] == VoxelState::EMPTY {
-            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Y_NEG, global_pos);
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::YNeg, global_pos);
         }
 
         if k > 0 && self.voxels[i][j][k - 1] == VoxelState::EMPTY {
-            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::Z_NEG, global_pos);
+            Self::add_voxel_face(vertices, indices, num_verts, FaceDir::ZNeg, global_pos);
         }
     }
 
@@ -175,7 +175,7 @@ impl VoxelChunk {
         let y = origin.y;
         let z = origin.z;
         match facing_dir {
-            FaceDir::Z_POS => {
+            FaceDir::ZPos => {
                 // back face
                 // y
                 // ^
@@ -204,7 +204,7 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            FaceDir::Y_POS => {
+            FaceDir::YPos => {
                 // top face
                 // 3 - 2 > x
                 // | / |
@@ -233,7 +233,7 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            FaceDir::X_POS => {
+            FaceDir::XPos => {
                 // right face
                 //         y
                 //         ^
@@ -262,7 +262,7 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            FaceDir::X_NEG => {
+            FaceDir::XNeg => {
                 // left face
                 // y
                 // ^
@@ -291,7 +291,7 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            FaceDir::Y_NEG => {
+            FaceDir::YNeg => {
                 // bottom face
                 // z
                 // ^
@@ -320,7 +320,7 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            FaceDir::Z_NEG => {
+            FaceDir::ZNeg => {
                 // front face
                 //         y
                 //         ^
@@ -349,7 +349,6 @@ impl VoxelChunk {
                     normal: [0.0, 0.0, 0.0],
                 });
             }
-            _ => return,
         }
 
         let first_index = *num_verts as u32;

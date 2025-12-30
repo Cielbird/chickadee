@@ -14,6 +14,7 @@ pub struct Material {
 
 /// GPU buffers for a mesh material
 pub struct MaterialBuffers {
+    #[allow(unused)]
     pub diffuse_texture: texture::Texture,
     pub bind_group: wgpu::BindGroup,
 }
@@ -43,7 +44,10 @@ impl Material {
             label: None,
         });
 
-        self.buffers = Some(MaterialBuffers { diffuse_texture, bind_group });
+        self.buffers = Some(MaterialBuffers {
+            diffuse_texture,
+            bind_group,
+        });
         self.dirty = false;
     }
 }

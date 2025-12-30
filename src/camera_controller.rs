@@ -1,15 +1,12 @@
-use std::sync::Arc;
-
 use cgmath::{Vector3, Zero};
 use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, KeyEvent, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
-    window::Window,
 };
 
 use crate::engine::{
-    component::{Component, ComponentRef},
+    component::Component,
     engine::get_engine,
     event::{OnEventContext, OnStartContext, OnUpdateContext},
     scene::Scene,
@@ -35,7 +32,7 @@ pub struct CameraController {
 }
 
 impl CameraController {
-    pub fn new(speed: f32) -> Self {
+    pub fn new() -> Self {
         Self {
             walk_speed: 0.01,
             sprint_speed: 0.05,
@@ -134,9 +131,9 @@ impl CameraController {
 }
 
 impl Component for CameraController {
-    fn on_start(&mut self, scene: &mut Scene, context: OnStartContext) {}
+    fn on_start(&mut self, _scene: &mut Scene, _context: OnStartContext) {}
 
-    fn on_update(&mut self, scene: &mut Scene, context: OnUpdateContext) {
+    fn on_update(&mut self, scene: &mut Scene, _context: OnUpdateContext) {
         if let Some((cam_comp_id, _cam_ptr)) = scene.find_first_component::<Camera>() {
             let cam = scene.get_entity(&cam_comp_id).unwrap().clone();
             let cam_transform = scene.get_tranform_mut(&cam).unwrap();
@@ -144,7 +141,7 @@ impl Component for CameraController {
         }
     }
 
-    fn on_event(&mut self, scene: &mut Scene, context: OnEventContext) {
+    fn on_event(&mut self, _scene: &mut Scene, context: OnEventContext) {
         match context.event {
             WindowEvent::KeyboardInput {
                 event:

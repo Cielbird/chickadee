@@ -3,8 +3,6 @@ use std::{
     path::Path,
 };
 
-use wgpu::util::DeviceExt;
-
 use super::{error::*, model};
 
 fn load_binary(file_name: &str) -> Result<Vec<u8>> {
@@ -23,16 +21,12 @@ pub fn load_string(file_name: &str) -> Result<String> {
     Ok(txt)
 }
 
-pub fn load_image(
-    file_name: &str,
-) -> Result<image::DynamicImage> {
+pub fn load_image(file_name: &str) -> Result<image::DynamicImage> {
     let data = load_binary(file_name)?;
     image::load_from_memory(&data).map_err(|e| Error::ImageError(e))
 }
 
-pub async fn load_model(
-    file_name: &str,
-) -> Result<model::Model> {
+pub async fn load_model(file_name: &str) -> Result<model::Model> {
     // path all files for the model will be relative to
     let parent_path = Path::new(file_name)
         .parent()
@@ -105,13 +99,13 @@ pub async fn load_model(
                     }
                 })
                 .collect::<Vec<_>>();
-            
+
             let indices = m.mesh.indices.clone();
 
             let material = m.mesh.material_id.unwrap_or(0);
 
             model::Mesh {
-                name: file_name.to_string(), 
+                name: file_name.to_string(),
                 vertices,
                 material,
                 indices,

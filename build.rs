@@ -1,6 +1,6 @@
 use fs_extra::dir::{copy, CopyOptions};
-use std::{env, fs};
 use std::path::Path;
+use std::{env, fs};
 
 fn main() {
     // This tells Cargo to rerun this script if something in /res/ changes.
@@ -10,12 +10,16 @@ fn main() {
 
     println!("cargo:warning=src is {:?} and dest is {:?}", src, dest);
 
-
     if dest.exists() {
         fs::remove_dir_all(&dest).unwrap();
     }
 
-    copy(src, &dest, &CopyOptions::new().overwrite(true).copy_inside(true)).unwrap();
+    copy(
+        src,
+        &dest,
+        &CopyOptions::new().overwrite(true).copy_inside(true),
+    )
+    .unwrap();
 
     println!("cargo:rerun-if-changed=res");
 }

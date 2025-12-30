@@ -1,13 +1,10 @@
-use std::{
-    sync::{Arc, Mutex, MutexGuard, RwLock},
-    thread::JoinHandle,
-};
+use std::sync::{Arc, Mutex, RwLock};
 
 use winit::{event::WindowEvent, window::Window};
 
-use crate::{camera_controller::CameraController, engine::handler::EngineHandler};
+use crate::engine::handler::EngineHandler;
 
-use super::{camera::Camera, renderer::Renderer, scene::Scene};
+use super::{renderer::Renderer, scene::Scene};
 
 use winit::event_loop::EventLoop;
 

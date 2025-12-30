@@ -24,7 +24,7 @@ fn main() {
     let camera = Camera::new();
     scene.add_component(player_cam.clone(), camera).unwrap();
 
-    let camera_ctrl = CameraController::new(1.);
+    let camera_ctrl = CameraController::new();
     scene
         .add_component(player_cam.clone(), camera_ctrl)
         .unwrap();

@@ -4,6 +4,7 @@ use crate::engine::model::ModelVertex;
 
 #[derive(Debug)]
 pub struct Mesh {
+    #[allow(unused)]
     pub name: String,
 
     // CPU buffer

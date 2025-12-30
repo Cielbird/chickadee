@@ -5,7 +5,7 @@ use cgmath::{
 
 use cgmath::Transform as CgTransform;
 
-/// 
+///
 /// +z is out of the screen
 #[derive(Debug, Clone)]
 pub struct Transform {
@@ -15,7 +15,8 @@ pub struct Transform {
 }
 
 impl Transform {
-    fn set_euler_rotation(&mut self, euler: Vector3<f32>) {
+    #[allow(unused)]
+    pub fn set_euler_rotation(&mut self, euler: Vector3<f32>) {
         let x_rotation = Quaternion::from_axis_angle(Vector3::unit_x(), Rad(euler.x));
         let y_rotation = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(euler.y));
         let z_rotation = Quaternion::from_axis_angle(Vector3::unit_z(), Rad(euler.z));
@@ -32,7 +33,8 @@ impl Transform {
         }
     }
 
-    fn forward(&self) -> Vector3<f32> {
+    #[allow(unused)]
+    pub fn forward(&self) -> Vector3<f32> {
         let rotation = Matrix4::from(self.rotation);
         rotation.z.truncate()
     }
@@ -83,6 +85,7 @@ impl Transform {
         Matrix4::from_translation(self.position.to_vec())
     }
 
+    #[allow(unused)]
     pub fn from_matrix(matrix: Matrix4<f32>) -> Self {
         // 1. Extract translation (global position)
         let translation = Point3::from_homogeneous(matrix.w);

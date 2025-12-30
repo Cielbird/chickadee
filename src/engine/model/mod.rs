@@ -1,10 +1,9 @@
-mod mesh;
 mod base;
-mod vertex;
 mod material;
+mod mesh;
+mod vertex;
 
-
-pub use mesh::*;
 pub use base::*;
-pub use vertex::*;
 pub use material::*;
+pub use mesh::*;
+pub use vertex::*;

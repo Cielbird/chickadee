@@ -7,8 +7,6 @@ pub struct ComponentId {
 
 impl ComponentId {
     pub fn new() -> Self {
-        Self {
-            id: Uuid::new_v4(),
-        }
+        Self { id: Uuid::new_v4() }
     }
 }

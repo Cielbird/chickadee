@@ -1,8 +1,6 @@
-
-
 const ATTRIBS: [wgpu::VertexAttribute; 3] =
     wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2, 2 => Float32x3];
-    
+
 impl Vertex for ModelVertex {
     fn desc() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
@@ -24,4 +22,3 @@ pub struct ModelVertex {
     pub uvs: [f32; 2],
     pub normal: [f32; 3],
 }
-

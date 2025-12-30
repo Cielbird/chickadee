@@ -1,6 +1,6 @@
-use std::{collections::HashMap};
-use crate::engine::error::*;
 use super::base::EntityId;
+use crate::engine::error::*;
+use std::collections::HashMap;
 
 /// Module for the entity graph
 pub struct EntityGraph {
@@ -9,7 +9,9 @@ pub struct EntityGraph {
 }
 
 struct Node {
+    #[allow(unused)]
     name: String,
+    #[allow(unused)]
     parent: Option<EntityId>,
     children: Vec<EntityId>,
 }
@@ -28,7 +30,11 @@ impl EntityGraph {
 
     pub fn add(&mut self, parent: EntityId, name: String) -> Result<EntityId> {
         let id = EntityId::new();
-        let new_node = Node { name, parent: Some(parent.clone()), children: vec![] };
+        let new_node = Node {
+            name,
+            parent: Some(parent.clone()),
+            children: vec![],
+        };
 
         if let Some(parent_node) = self.nodes.get_mut(&parent) {
             parent_node.children.push(id.clone());

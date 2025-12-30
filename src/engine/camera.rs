@@ -1,6 +1,6 @@
-use cgmath::{Matrix4, Point3, Quaternion, Transform, Vector3, Zero};
+use cgmath::{Matrix4, Transform, Zero};
 
-use crate::engine::{event::{OnEventContext, OnStartContext, OnUpdateContext}, transform};
+use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
 
 use super::{component::Component, scene::Scene};
 
@@ -30,7 +30,7 @@ impl CameraUniform {
     }
 
     pub fn update_view_proj(&mut self, scene: &Scene) {
-        if let Some((id, cam)) = scene.find_first_component::<Camera>() {
+        if let Some((_id, cam)) = scene.find_first_component::<Camera>() {
             if let Ok(cam) = cam.get_ref() {
                 self.view_proj = cam.get_view_projection_matrix().into();
             }
@@ -50,7 +50,7 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 );
 
 impl Component for Camera {
-    fn on_start(&mut self, scene: &mut Scene, context: OnStartContext) {
+    fn on_start(&mut self, _scene: &mut Scene, _context: OnStartContext) {
         return;
     }
 
@@ -58,12 +58,11 @@ impl Component for Camera {
         // update projection matrix from entity's transform
         let camera_transform = scene.get_tranform_ref(&context.entity).unwrap();
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        self.view_projection_matrix = OPENGL_TO_WGPU_MATRIX
-                    * proj
-                    * camera_transform.matrix().inverse_transform().unwrap();
+        self.view_projection_matrix =
+            OPENGL_TO_WGPU_MATRIX * proj * camera_transform.matrix().inverse_transform().unwrap();
     }
 
-    fn on_event(&mut self, scene: &mut Scene, context: OnEventContext) {
+    fn on_event(&mut self, _scene: &mut Scene, _context: OnEventContext) {
         return;
     }
 }

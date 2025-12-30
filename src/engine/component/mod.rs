@@ -1,5 +1,4 @@
 /// Module for components
-
 mod base;
 mod id;
 
