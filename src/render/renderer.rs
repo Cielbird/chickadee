@@ -9,16 +9,14 @@ use crate::{model::InstanceRaw, transform::Transform};
 
 use super::super::{
     camera::CameraUniform,
-    model::{Model, Vertex, VertexDesc},
+    model::{Vertex, VertexDesc},
     scene::Scene,
     texture,
-    voxels::VoxelChunk,
 };
 
 pub struct Renderer<'a> {
     window: Arc<Window>,
     scene: Arc<RwLock<Scene>>,
-    models: Vec<Model>,
 
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
@@ -100,17 +98,9 @@ impl<'a> Renderer<'a> {
             "depth_texture",
         );
 
-        let mut models = vec![];
-
-        let voxel_chunk = VoxelChunk::new();
-        let voxels = voxel_chunk.get_model().unwrap();
-
-        models.push(voxels);
-
         Self {
             window,
             scene,
-            models,
 
             surface,
             device,
@@ -520,21 +510,6 @@ impl<'a> Renderer<'a> {
                     &self.texture_bind_group_layout,
                 )
                 .expect("couldn't draw mesh");
-
-            for i in 0..self.models.len() {
-                self.models
-                    .get_mut(i)
-                    .unwrap()
-                    .draw_model(
-                        &Transform::identity(),
-                        &self.device,
-                        &self.queue,
-                        &mut render_pass,
-                        &self.camera_bind_group,
-                        &self.texture_bind_group_layout,
-                    )
-                    .unwrap();
-            }
         }
 
         {

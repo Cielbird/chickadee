@@ -178,6 +178,18 @@ impl Scene {
         None
     }
 
+    pub fn get_component<C: Component>(&self, entity: &EntityId) -> Option<(ComponentId, ComponentRef<C>)> {
+        let entity = self.entities.get(entity)?;
+        for comp_id in &entity.components {
+            let comp_ref = self.components.get(comp_id).unwrap();
+            // Could be optimized with a haspmap
+            if let Ok(x) = comp_ref.clone().try_into() {
+                return Some((comp_id.clone(), x));
+            }
+        }
+        None
+    }
+
     pub fn get_transform_ref(&self, entity: &EntityId) -> Option<&EntityTransform> {
         let graph = self.entities.get(entity)?;
         Some(&graph.transform)
