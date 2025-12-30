@@ -19,14 +19,14 @@ impl EntityGraph {
     pub fn new() -> Self {
         let root = EntityId::new();
         let mut nodes = HashMap::new();
-        nodes.insert(root.clone(), Node {
-            parent: None,
-            children: vec![],
-        });
-        Self {
-            root,
-            nodes,
-        }
+        nodes.insert(
+            root.clone(),
+            Node {
+                parent: None,
+                children: vec![],
+            },
+        );
+        Self { root, nodes }
     }
 
     pub fn root(&self) -> EntityId {

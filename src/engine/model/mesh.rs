@@ -38,13 +38,11 @@ impl Mesh {
             usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
         });
 
-        let instance_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Instance Buffer"),
-                contents: bytemuck::cast_slice(&[Transform::identity().to_instance_raw()]), // only one instance
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            }
-        );
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&[Transform::identity().to_instance_raw()]), // only one instance
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        });
 
         self.buffers = Some(MeshBuffers {
             vertex_buffer,
@@ -54,8 +52,6 @@ impl Mesh {
         self.dirty = false;
     }
 }
-
-
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -102,7 +98,8 @@ impl InstanceRaw {
     }
 }
 
-impl Transform { // TODO refactor, maybe 
+impl Transform {
+    // TODO refactor, maybe
     pub fn to_instance_raw(&self) -> InstanceRaw {
         InstanceRaw {
             model: self.matrix().into(),

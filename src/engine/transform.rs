@@ -47,7 +47,7 @@ impl Transform {
 
     /// Translate the transform relative to its rotation
     pub fn move_local(&mut self, move_vec: Vector3<f32>) {
-        // TODO take into account scale..? 
+        // TODO take into account scale..?
         let translation = self.rotation_matrix()
             * Matrix4::from_translation(move_vec)
             * self.rotation_matrix().inverse_transform().unwrap();
@@ -116,7 +116,6 @@ impl Transform {
         }
     }
 }
-
 
 impl std::ops::Mul for Transform {
     type Output = Transform;

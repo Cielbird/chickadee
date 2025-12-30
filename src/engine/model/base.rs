@@ -1,6 +1,7 @@
 use crate::engine::{
     component::Component,
-    model::{Material, Mesh}, transform::Transform,
+    model::{Material, Mesh},
+    transform::Transform,
 };
 
 use super::super::{
@@ -18,7 +19,7 @@ impl Model {
     pub fn draw_mesh(
         &mut self,
         mesh_index: usize,
-        transform: Transform, 
+        transform: Transform,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -70,7 +71,7 @@ impl Model {
 
     pub fn draw_model(
         &mut self,
-        transform: &Transform, 
+        transform: &Transform,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,

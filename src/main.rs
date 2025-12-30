@@ -41,7 +41,5 @@ fn main() {
     let model = pollster::block_on(model_fut).expect("coulnd't load model");
     scene.add_component(player, model).unwrap();
 
-
-
     Engine::run(scene);
 }

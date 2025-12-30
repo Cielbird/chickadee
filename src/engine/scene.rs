@@ -1,13 +1,10 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
-use wgpu::core::command::TransferError;
-
 use crate::engine::component::{Component, ComponentId, ComponentRef};
 use crate::engine::entity::{Entity, EntityTransform};
 use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::engine::model::Model;
-use crate::engine::transform::Transform;
 
 use super::{component::DynComponentRef, entity::EntityId};
 
@@ -222,7 +219,7 @@ impl Scene {
             let next = next.unwrap();
             let (children, parent_was_dirty) = {
                 let node = graph.node(&next).unwrap();
-                let mut was_dirty = false;
+                let was_dirty;
                 if let Some(parent) = node.parent() {
                     let [entity, parent] = self.entities.get_disjoint_mut([&next, &parent]);
                     let entity = entity.unwrap();
@@ -230,7 +227,8 @@ impl Scene {
 
                     was_dirty = entity.transform.dirty;
                     if was_dirty {
-                        entity.transform.global = parent.transform.global.clone() * entity.transform.local.clone();
+                        entity.transform.global =
+                            parent.transform.global.clone() * entity.transform.local.clone();
                         entity.transform.dirty = false;
                     }
                 } else {

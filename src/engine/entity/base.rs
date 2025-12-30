@@ -15,6 +15,7 @@ impl EntityId {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Entity {
+    #[allow(unused)]
     pub name: String,
     pub components: Vec<ComponentId>,
     pub transform: EntityTransform,
@@ -47,6 +48,7 @@ impl EntityTransform {
         }
     }
 
+    #[allow(unused)]
     pub fn local_ref(&self) -> &Transform {
         &self.local
     }
@@ -54,17 +56,17 @@ impl EntityTransform {
     pub fn global_ref(&self) -> &Transform {
         &self.global
     }
-    
+
     pub(crate) fn move_global(&mut self, vec: cgmath::Vector3<f32>) {
         self.dirty = true;
         self.local.move_global(vec)
     }
-    
+
     pub(crate) fn move_local(&mut self, vec: cgmath::Vector3<f32>) {
         self.dirty = true;
         self.local.move_local(vec)
     }
-    
+
     pub(crate) fn rotate_euler_global(&mut self, euler: cgmath::Vector3<f32>) {
         self.dirty = true;
         self.local.rotate_euler_global(euler)

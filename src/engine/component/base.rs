@@ -24,12 +24,14 @@ pub struct ComponentRef<C: Component> {
 }
 
 impl<C: Component> ComponentRef<C> {
-    pub fn get_ref<'a>(&'a self) -> LockResult<RwLockReadGuard<'a, C>> { // TODO use AsRef trait
+    pub fn get_ref<'a>(&'a self) -> LockResult<RwLockReadGuard<'a, C>> {
+        // TODO use AsRef trait
         self.inner.read()
     }
 
     #[allow(unused)]
-    pub fn get_mut<'a>(&'a mut self) -> LockResult<RwLockWriteGuard<'a, C>> { // TODO use AsMut trait
+    pub fn get_mut<'a>(&'a mut self) -> LockResult<RwLockWriteGuard<'a, C>> {
+        // TODO use AsMut trait
         self.inner.write()
     }
 }
