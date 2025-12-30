@@ -1,7 +1,7 @@
 use cgmath::Point3;
 use noise::{NoiseFn, Perlin};
 
-use crate::engine::resources::load_image;
+use crate::engine::{resources::load_image, transform::Transform};
 
 use super::{
     error::*,
@@ -110,6 +110,7 @@ impl VoxelChunk {
             vertices,
             indices,
             material: 0,
+            transform: Transform::identity(),
             dirty: true,
             buffers: None,
         };

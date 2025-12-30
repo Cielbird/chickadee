@@ -3,6 +3,8 @@ use std::{
     path::Path,
 };
 
+use crate::engine::transform::Transform;
+
 use super::{error::*, model};
 
 fn load_binary(file_name: &str) -> Result<Vec<u8>> {
@@ -109,6 +111,7 @@ pub async fn load_model(file_name: &str) -> Result<model::Model> {
                 vertices,
                 material,
                 indices,
+                transform: Transform::identity(),
                 dirty: true,
                 buffers: None,
             }

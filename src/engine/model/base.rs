@@ -1,6 +1,8 @@
+use cgmath::EuclideanSpace;
+
 use crate::engine::{
     component::Component,
-    model::{Material, Mesh},
+    model::{Material, Mesh}, transform::Transform,
 };
 
 use super::super::{
@@ -18,6 +20,7 @@ impl Model {
     pub fn draw_mesh(
         &mut self,
         mesh_index: usize,
+        transform: Transform, 
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -36,9 +39,14 @@ impl Model {
 
         // Update buffers if not updated
         if mesh.dirty {
-            mesh.update_buffers(device);
+            mesh.reinit_buffers(device);
         }
         let mesh_buffers = mesh.buffers.as_mut().unwrap();
+
+        // update instance buffer (mesh's rendered transform)
+        let instance_data = [transform.to_instance_raw()];
+        let data: &[u8] = bytemuck::cast_slice(&instance_data);
+        queue.write_buffer(&mesh_buffers.instance_buffer, 0, data);
 
         if material.dirty {
             material.update_buffers(device, queue, material_layout);
@@ -46,6 +54,7 @@ impl Model {
         let material_buffers = material.buffers.as_mut().unwrap();
 
         render_pass.set_vertex_buffer(0, mesh_buffers.vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, mesh_buffers.instance_buffer.slice(..));
         render_pass.set_index_buffer(
             mesh_buffers.index_buffer.slice(..),
             wgpu::IndexFormat::Uint32,
@@ -63,6 +72,7 @@ impl Model {
 
     pub fn draw_model(
         &mut self,
+        transform: &Transform, 
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -72,6 +82,7 @@ impl Model {
         for i in 0..self.meshes.len() {
             self.draw_mesh(
                 i,
+                transform.clone(),
                 device,
                 queue,
                 render_pass,

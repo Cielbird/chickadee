@@ -5,6 +5,8 @@ use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
+use crate::engine::{model::InstanceRaw, transform::Transform};
+
 use super::super::{
     camera::CameraUniform,
     model::{Model, ModelVertex, Vertex},
@@ -346,7 +348,7 @@ impl<'a> Renderer<'a> {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[ModelVertex::desc()],
+                buffers: &[ModelVertex::desc(), InstanceRaw::desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -525,6 +527,7 @@ impl<'a> Renderer<'a> {
                     .get_mut(i)
                     .unwrap()
                     .draw_model(
+                        &Transform::identity(),
                         &self.device,
                         &self.queue,
                         &mut render_pass,
