@@ -1,13 +1,17 @@
-pub mod camera;
-pub mod component;
-pub mod engine;
-pub mod entity;
-pub mod error;
-pub mod event;
-pub mod handler;
-pub mod model;
-pub mod render;
-pub mod resources;
-pub mod scene;
-pub mod texture;
-pub mod transform;
+mod camera;
+mod component;
+mod engine;
+mod entity;
+mod error;
+mod event;
+mod handler;
+mod model;
+mod render;
+mod resources;
+mod scene;
+mod texture;
+mod transform;
+
+mod api;
+
+pub use api::*;
