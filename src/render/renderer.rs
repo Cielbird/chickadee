@@ -5,7 +5,7 @@ use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-use crate::{model::InstanceRaw, transform::Transform};
+use crate::model::InstanceRaw;
 
 use super::super::{
     camera::CameraUniform,

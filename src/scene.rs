@@ -178,7 +178,10 @@ impl Scene {
         None
     }
 
-    pub fn get_component<C: Component>(&self, entity: &EntityId) -> Option<(ComponentId, ComponentRef<C>)> {
+    pub fn get_component<C: Component>(
+        &self,
+        entity: &EntityId,
+    ) -> Option<(ComponentId, ComponentRef<C>)> {
         let entity = self.entities.get(entity)?;
         for comp_id in &entity.components {
             let comp_ref = self.components.get(comp_id).unwrap();
