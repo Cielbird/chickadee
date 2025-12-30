@@ -6,7 +6,7 @@ pub mod error;
 pub mod event;
 pub mod handler;
 pub mod model;
-pub mod renderer;
+pub mod render;
 pub mod resources;
 pub mod scene;
 pub mod texture;

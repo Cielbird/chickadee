@@ -113,7 +113,6 @@ impl VoxelChunk {
             dirty: true,
             buffers: None,
         };
-        println!("mesh: {:?}", mesh);
 
         Ok(mesh)
     }

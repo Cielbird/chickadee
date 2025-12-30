@@ -3,15 +3,12 @@ mod engine;
 
 use crate::{
     camera_controller::CameraController,
-    engine::{camera::Camera, engine::Engine, scene::Scene},
+    engine::{camera::Camera, engine::Engine, resources::load_model, scene::Scene},
 };
 
 fn main() {
     let mut scene = Scene::new();
     let root = scene.get_root();
-
-    // let voxels = Entity::add_child(&root);
-    // Entity::add_component(&voxels, component);
 
     let player = scene
         .add_entity(root.clone(), "player".to_string())
@@ -28,6 +25,11 @@ fn main() {
     scene
         .add_component(player_cam.clone(), camera_ctrl)
         .unwrap();
+
+    let block_entity = scene.add_entity(root, "block".to_string()).unwrap();
+    let model_fut = load_model("cube/cube.obj");
+    let model = pollster::block_on(model_fut).expect("coulnd't load model");
+    scene.add_component(block_entity, model).unwrap();
 
     Engine::run(scene);
 }

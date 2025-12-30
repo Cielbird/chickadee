@@ -4,7 +4,7 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::engine::handler::EngineHandler;
 
-use super::{renderer::Renderer, scene::Scene};
+use super::{render::Renderer, scene::Scene};
 
 use winit::event_loop::EventLoop;
 

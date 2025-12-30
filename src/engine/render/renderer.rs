@@ -5,7 +5,7 @@ use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-use super::{
+use super::super::{
     camera::CameraUniform,
     model::{Model, ModelVertex, Vertex},
     resources::load_model,
@@ -101,14 +101,10 @@ impl<'a> Renderer<'a> {
 
         let mut models = vec![];
 
-        let model_fut = load_model("cube/cube.obj");
-        let model = pollster::block_on(model_fut).expect("coulnd't load model");
-
         let voxel_chunk = VoxelChunk::new();
         let voxels = voxel_chunk.get_model().unwrap();
 
         models.push(voxels);
-        models.push(model);
 
         Self {
             window,
@@ -404,8 +400,6 @@ impl<'a> Renderer<'a> {
             .copied()
             .unwrap_or(capabilities.formats[0]);
 
-        println!("Texture format: {:?}", surface_format);
-
         wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
@@ -517,7 +511,13 @@ impl<'a> Renderer<'a> {
             self.scene
                 .read()
                 .unwrap()
-                .draw_scene(&mut render_pass, &self.camera_bind_group)
+                .draw_scene(
+                    &mut render_pass,
+                    &self.device,
+                    &self.queue,
+                    &self.camera_bind_group,
+                    &self.texture_bind_group_layout,
+                )
                 .expect("couldn't draw mesh");
 
             for i in 0..self.models.len() {
