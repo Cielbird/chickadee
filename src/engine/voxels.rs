@@ -1,11 +1,11 @@
 use cgmath::Point3;
 use noise::{NoiseFn, Perlin};
 
-use crate::engine::{resources::load_image, transform::Transform};
+use crate::engine::resources::load_image;
 
 use super::{
     error::*,
-    model::{self, Mesh, Model, ModelVertex},
+    model::{self, Mesh, Model, Vertex},
 };
 
 const CHUNK_SIZE: usize = 8;
@@ -110,7 +110,6 @@ impl VoxelChunk {
             vertices,
             indices,
             material: 0,
-            transform: Transform::identity(),
             dirty: true,
             buffers: None,
         };
@@ -120,7 +119,7 @@ impl VoxelChunk {
 
     fn add_voxel_faces(
         &self,
-        vertices: &mut Vec<ModelVertex>,
+        vertices: &mut Vec<Vertex>,
         indices: &mut Vec<u32>,
         num_verts: &mut usize,
         voxel_indices: cgmath::Point3<usize>,
@@ -164,7 +163,7 @@ impl VoxelChunk {
     }
 
     fn add_voxel_face(
-        vertices: &mut Vec<ModelVertex>,
+        vertices: &mut Vec<Vertex>,
         indices: &mut Vec<u32>,
         num_verts: &mut usize,
         facing_dir: FaceDir,
@@ -183,22 +182,22 @@ impl VoxelChunk {
                 // | / |
                 // 0 - 1 > x
                 let (u, v) = (2., 0.);
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y, z + VOXEL_SIZE],
                     uvs: [d_uv * u, d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
                     uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
                     uvs: [d_uv * (u + 1.), d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
                     uvs: [d_uv * u, d_uv * v],
                     normal: [0.0, 0.0, 0.0],
@@ -212,22 +211,22 @@ impl VoxelChunk {
                 // v
                 // z
                 let (u, v) = (3., 1.);
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
                     uvs: [d_uv * u, d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
                     uvs: [d_uv * (u + 1.), d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
                     uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y + VOXEL_SIZE, z],
                     uvs: [d_uv * u, d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
@@ -241,22 +240,22 @@ impl VoxelChunk {
                 //     | / |
                 // z < 0 - 1
                 let (u, v) = (2., 0.);
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
                     uvs: [d_uv * u, d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y, z],
                     uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
                     uvs: [d_uv * (u + 1.), d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z + VOXEL_SIZE],
                     uvs: [d_uv * u, d_uv * v],
                     normal: [0.0, 0.0, 0.0],
@@ -270,22 +269,22 @@ impl VoxelChunk {
                 // | / |
                 // 0 - 1 > z
                 let (u, v) = (2., 0.);
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y, z],
                     uvs: [d_uv * u, d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y, z + VOXEL_SIZE],
                     uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y + VOXEL_SIZE, z + VOXEL_SIZE],
                     uvs: [d_uv * (u + 1.), d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y + VOXEL_SIZE, z],
                     uvs: [d_uv * u, d_uv * v],
                     normal: [0.0, 0.0, 0.0],
@@ -299,22 +298,22 @@ impl VoxelChunk {
                 // | / |
                 // 0 - 1
                 let (u, v) = (2., 1.);
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y, z],
                     uvs: [d_uv * u, d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y, z],
                     uvs: [d_uv * (u + 1.), d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y, z + VOXEL_SIZE],
                     uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y, z + VOXEL_SIZE],
                     uvs: [d_uv * u, d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
@@ -328,22 +327,22 @@ impl VoxelChunk {
                 //     | / |
                 // x < 0 - 1
                 let (u, v) = (2., 0.);
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y, z],
                     uvs: [d_uv * u, d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y, z],
                     uvs: [d_uv * (u + 1.), d_uv * (v + 1.)],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x, y + VOXEL_SIZE, z],
                     uvs: [d_uv * (u + 1.), d_uv * v],
                     normal: [0.0, 0.0, 0.0],
                 });
-                vertices.push(ModelVertex {
+                vertices.push(Vertex {
                     position: [x + VOXEL_SIZE, y + VOXEL_SIZE, z],
                     uvs: [d_uv * u, d_uv * v],
                     normal: [0.0, 0.0, 0.0],

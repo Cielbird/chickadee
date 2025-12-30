@@ -9,8 +9,7 @@ use crate::engine::{model::InstanceRaw, transform::Transform};
 
 use super::super::{
     camera::CameraUniform,
-    model::{Model, ModelVertex, Vertex},
-    resources::load_model,
+    model::{Model, Vertex, VertexDesc},
     scene::Scene,
     texture,
     voxels::VoxelChunk,
@@ -348,7 +347,7 @@ impl<'a> Renderer<'a> {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[ModelVertex::desc(), InstanceRaw::desc()],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {

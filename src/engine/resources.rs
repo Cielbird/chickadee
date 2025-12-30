@@ -3,8 +3,6 @@ use std::{
     path::Path,
 };
 
-use crate::engine::transform::Transform;
-
 use super::{error::*, model};
 
 fn load_binary(file_name: &str) -> Result<Vec<u8>> {
@@ -75,7 +73,7 @@ pub async fn load_model(file_name: &str) -> Result<model::Model> {
             let vertices = (0..m.mesh.positions.len() / 3)
                 .map(|i| {
                     if m.mesh.normals.is_empty() {
-                        model::ModelVertex {
+                        model::Vertex {
                             position: [
                                 m.mesh.positions[i * 3],
                                 m.mesh.positions[i * 3 + 1],
@@ -85,7 +83,7 @@ pub async fn load_model(file_name: &str) -> Result<model::Model> {
                             normal: [0.0, 0.0, 0.0],
                         }
                     } else {
-                        model::ModelVertex {
+                        model::Vertex {
                             position: [
                                 m.mesh.positions[i * 3],
                                 m.mesh.positions[i * 3 + 1],
@@ -111,7 +109,6 @@ pub async fn load_model(file_name: &str) -> Result<model::Model> {
                 vertices,
                 material,
                 indices,
-                transform: Transform::identity(),
                 dirty: true,
                 buffers: None,
             }

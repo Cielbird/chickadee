@@ -1,5 +1,3 @@
-use cgmath::EuclideanSpace;
-
 use crate::engine::{
     component::Component,
     model::{Material, Mesh}, transform::Transform,

@@ -1,6 +1,6 @@
 use wgpu::{util::DeviceExt as _, Device};
 
-use crate::engine::{model::ModelVertex, transform::Transform};
+use crate::engine::{model::Vertex, transform::Transform};
 
 #[derive(Debug)]
 pub struct Mesh {
@@ -8,9 +8,8 @@ pub struct Mesh {
     pub name: String,
 
     // CPU buffer
-    pub vertices: Vec<ModelVertex>,
+    pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
-    pub transform: Transform, // copied from the entity on update
     pub material: usize,
 
     pub dirty: bool, // true if CPU vertex and index buffers have been changed but not GPU buffers

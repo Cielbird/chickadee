@@ -43,7 +43,7 @@ impl Transform {
         self.position += vector;
     }
 
-    pub fn move_local(&mut self, move_vec: Vector3<f32>) {
+    pub fn move_local(&mut self, move_vec: Vector3<f32>) { // TODO remove "local" operations: not necessary with the entity tree
         //let local_vec = self.rotation_matrix().inverse_transform().unwrap() * Matrix4::from_translation(vector);
         let translation = self.rotation_matrix()
             * Matrix4::from_translation(move_vec)

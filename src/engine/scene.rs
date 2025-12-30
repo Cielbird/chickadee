@@ -1,14 +1,11 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::time::Instant;
-
-use cgmath::Vector3;
 
 use crate::engine::component::{Component, ComponentId, ComponentRef};
 use crate::engine::entity::Entity;
 use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::engine::model::Model;
-use crate::engine::transform::{self, Transform};
+use crate::engine::transform::Transform;
 
 use super::{component::DynComponentRef, entity::EntityId};
 
@@ -22,7 +19,6 @@ pub struct Scene {
     components: HashMap<ComponentId, DynComponentRef>,
     entities: HashMap<EntityId, Entity>,
     component_entities: HashMap<ComponentId, EntityId>,
-    start_time: Instant,
 }
 
 impl Scene {
@@ -31,14 +27,12 @@ impl Scene {
         let components = HashMap::new();
         let entities = HashMap::new();
         let component_entities = HashMap::new();
-        let start_time = Instant::now();
 
         Self {
             entity_graph,
             components,
             entities,
             component_entities,
-            start_time,
         }
     }
 
@@ -68,7 +62,7 @@ impl Scene {
                     let mut model = model.get_mut().unwrap();
 
                     let transform = self.get_tranform_ref(&entity_id).unwrap();
-                    
+
                     model.draw_model(
                         &transform,
                         device,
