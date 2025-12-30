@@ -8,9 +8,9 @@ use winit::{
 use crate::engine::{
     component::Component,
     engine::get_engine,
+    entity::EntityTransform,
     event::{OnEventContext, OnStartContext, OnUpdateContext},
     scene::Scene,
-    transform::Transform,
 };
 
 use super::engine::camera::Camera;
@@ -50,11 +50,10 @@ impl CameraController {
         }
     }
 
-    pub fn update_camera(&mut self, camera_transform: &mut Transform) {
+    pub fn update_camera(&mut self, cam: &mut EntityTransform, cam_base: &mut EntityTransform) {
         // Prevents glitching when the camera gets too close to the
         // center of the scene.
         let mut move_vec = Vector3::<f32>::zero();
-        let mut global_move_vec = Vector3::<f32>::zero();
 
         // needs entity hierarchy for correct movement
         if self.is_forward_pressed {
@@ -72,39 +71,34 @@ impl CameraController {
         }
 
         if self.is_up_pressed {
-            global_move_vec += Vector3::new(0., 1., 0.);
+            move_vec += Vector3::new(0., 1., 0.);
         }
         if self.is_down_pressed {
-            global_move_vec += Vector3::new(0., -1., 0.);
+            move_vec += Vector3::new(0., -1., 0.);
         }
 
         if self.is_sprint_pressed {
             move_vec *= self.sprint_speed;
-            global_move_vec *= self.sprint_speed;
         } else {
             move_vec *= self.walk_speed;
-            global_move_vec *= self.walk_speed;
         }
 
-        camera_transform.move_local(move_vec);
-        camera_transform.move_global(global_move_vec);
+        cam_base.move_local(move_vec);
 
-        // TODO this should be solved with a transform hierachy
-
-        // local rotation for the pitch
-        let rotation = Vector3 {
-            x: self.delta_pitch * self.cam_speed,
-            y: 0.,
-            z: 0.,
-        };
-        camera_transform.rotate_euler_local(rotation);
         // global rotation for the yaw
         let rotation = Vector3 {
             x: 0.,
             y: self.delta_yaw * self.cam_speed,
             z: 0.,
         };
-        camera_transform.rotate_euler_global(rotation);
+        cam_base.rotate_euler_global(rotation);
+        // local rotation for the pitch
+        let rotation = Vector3 {
+            x: self.delta_pitch * self.cam_speed,
+            y: 0.,
+            z: 0.,
+        };
+        cam.rotate_euler_global(rotation);
 
         // reset rotation deltas
         self.delta_yaw = 0.;
@@ -135,9 +129,12 @@ impl Component for CameraController {
 
     fn on_update(&mut self, scene: &mut Scene, _context: OnUpdateContext) {
         if let Some((cam_comp_id, _cam_ptr)) = scene.find_first_component::<Camera>() {
-            let cam = scene.get_entity(&cam_comp_id).unwrap().clone();
-            let cam_transform = scene.get_tranform_mut(&cam).unwrap();
-            self.update_camera(cam_transform);
+            let cam = scene.get_entity(&cam_comp_id).unwrap();
+            let cam_base = scene.parent(&cam).unwrap();
+            let [cam, cam_base] = scene.get_transform_disjoint_mut([&cam, &cam_base]);
+            let cam = cam.unwrap();
+            let cam_base = cam_base.unwrap();
+            self.update_camera(cam, cam_base);
         }
     }
 

@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
+use wgpu::core::command::TransferError;
+
 use crate::engine::component::{Component, ComponentId, ComponentRef};
-use crate::engine::entity::Entity;
+use crate::engine::entity::{Entity, EntityTransform};
 use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::engine::model::Model;
 use crate::engine::transform::Transform;
@@ -23,10 +25,13 @@ pub struct Scene {
 
 impl Scene {
     pub fn new() -> Self {
-        let entity_graph = Arc::new(RwLock::new(EntityGraph::new()));
+        let entity_graph = EntityGraph::new();
         let components = HashMap::new();
-        let entities = HashMap::new();
+        let mut entities = HashMap::new();
+        entities.insert(entity_graph.root(), Entity::new("root".to_string()));
         let component_entities = HashMap::new();
+
+        let entity_graph = Arc::new(RwLock::new(entity_graph));
 
         Self {
             entity_graph,
@@ -61,10 +66,10 @@ impl Scene {
                 if let Ok(mut model) = TryInto::<ComponentRef<Model>>::try_into(component) {
                     let mut model = model.get_mut().unwrap();
 
-                    let transform = self.get_tranform_ref(&entity_id).unwrap();
+                    let transform = self.get_transform_ref(&entity_id).unwrap();
 
                     model.draw_model(
-                        &transform,
+                        transform.global_ref(),
                         device,
                         queue,
                         render_pass,
@@ -97,21 +102,24 @@ impl Scene {
     }
 
     pub fn on_update(&mut self) {
-        for (entity_id, component_ids) in self.entities.clone() {
-            for component_id in component_ids.components {
-                let component = self
-                    .components
-                    .get(&component_id)
-                    .expect("Component not found, scene corrupted!")
-                    .clone();
-                component.on_update(
-                    self,
-                    OnUpdateContext {
-                        entity: entity_id.clone(),
-                        component: component_id,
-                    },
-                );
-            }
+        // update transforms
+        self.update_transforms();
+
+        let component_entities = self.component_entities.clone();
+        for (comp_id, entity_id) in component_entities {
+            let component = self
+                .components
+                .get(&comp_id)
+                .expect("Component not found, scene corrupted!")
+                .clone();
+
+            component.on_update(
+                self,
+                OnUpdateContext {
+                    entity: entity_id.clone(),
+                    component: comp_id,
+                },
+            );
         }
     }
 
@@ -137,8 +145,8 @@ impl Scene {
 
     pub fn add_entity(&mut self, parent: EntityId, name: String) -> Result<EntityId> {
         let mut graph = self.entity_graph.write().unwrap();
-        let id = graph.add(parent, name)?;
-        self.entities.insert(id.clone(), Entity::new());
+        let id = graph.add(parent)?;
+        self.entities.insert(id.clone(), Entity::new(name));
 
         Ok(id)
     }
@@ -173,15 +181,79 @@ impl Scene {
         None
     }
 
-    pub fn get_tranform_ref(&self, entity: &EntityId) -> Option<&Transform> {
-        Some(&self.entities.get(&entity)?.transform)
+    pub fn get_transform_ref(&self, entity: &EntityId) -> Option<&EntityTransform> {
+        let graph = self.entities.get(entity)?;
+        Some(&graph.transform)
     }
 
-    pub fn get_tranform_mut(&mut self, entity: &EntityId) -> Option<&mut Transform> {
-        Some(&mut self.entities.get_mut(&entity)?.transform)
+    pub fn get_transform_mut(&mut self, entity: &EntityId) -> Option<&mut EntityTransform> {
+        let entity = self.entities.get_mut(entity)?;
+        Some(&mut entity.transform)
     }
 
-    pub(crate) fn get_entity(&self, comp_id: &ComponentId) -> Option<&EntityId> {
-        self.component_entities.get(comp_id)
+    pub fn get_transform_disjoint_mut<const N: usize>(
+        &mut self,
+        entities: [&EntityId; N],
+    ) -> [Option<&mut EntityTransform>; N] {
+        let entities = self.entities.get_disjoint_mut(entities);
+        let transforms = entities.map(|e| e.map(|e| &mut e.transform));
+
+        transforms
+    }
+
+    pub(crate) fn get_entity(&self, comp_id: &ComponentId) -> Option<EntityId> {
+        self.component_entities.get(comp_id).cloned()
+    }
+
+    pub(crate) fn parent(&self, child_id: &EntityId) -> Option<EntityId> {
+        let graph = self.entity_graph.read().unwrap();
+        graph.node(child_id)?.parent()
+    }
+
+    fn update_transforms(&mut self) {
+        let graph = self.entity_graph.read().unwrap();
+        let mut frontier = VecDeque::new();
+        frontier.push_front(graph.root());
+        loop {
+            let next = frontier.pop_back();
+            if next.is_none() {
+                break;
+            }
+            let next = next.unwrap();
+            let (children, parent_was_dirty) = {
+                let node = graph.node(&next).unwrap();
+                let mut was_dirty = false;
+                if let Some(parent) = node.parent() {
+                    let [entity, parent] = self.entities.get_disjoint_mut([&next, &parent]);
+                    let entity = entity.unwrap();
+                    let parent = parent.unwrap();
+
+                    was_dirty = entity.transform.dirty;
+                    if was_dirty {
+                        entity.transform.global = parent.transform.global.clone() * entity.transform.local.clone();
+                        entity.transform.dirty = false;
+                    }
+                } else {
+                    // entity had no parent: root
+                    let entity = self.entities.get_mut(&next).unwrap();
+
+                    was_dirty = entity.transform.dirty;
+                    if was_dirty {
+                        entity.transform.global = entity.transform.local.clone();
+                        entity.transform.dirty = false;
+                    }
+                }
+                (node.children().clone(), was_dirty)
+            };
+            if parent_was_dirty {
+                for child_id in &children {
+                    let child = self.entities.get_mut(child_id).unwrap();
+                    child.transform.dirty = true
+                }
+            }
+            for child in children {
+                frontier.push_front(child.clone());
+            }
+        }
     }
 }

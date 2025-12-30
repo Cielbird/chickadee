@@ -8,19 +8,24 @@ pub struct EntityGraph {
     nodes: HashMap<EntityId, Node>,
 }
 
-struct Node {
-    #[allow(unused)]
-    name: String,
+pub struct Node {
     #[allow(unused)]
     parent: Option<EntityId>,
     children: Vec<EntityId>,
+    // TODO put entity data here?
 }
 
 impl EntityGraph {
     pub fn new() -> Self {
+        let root = EntityId::new();
+        let mut nodes = HashMap::new();
+        nodes.insert(root.clone(), Node {
+            parent: None,
+            children: vec![],
+        });
         Self {
-            root: EntityId::new(),
-            nodes: HashMap::new(),
+            root,
+            nodes,
         }
     }
 
@@ -28,10 +33,9 @@ impl EntityGraph {
         self.root.clone()
     }
 
-    pub fn add(&mut self, parent: EntityId, name: String) -> Result<EntityId> {
+    pub fn add(&mut self, parent: EntityId) -> Result<EntityId> {
         let id = EntityId::new();
         let new_node = Node {
-            name,
             parent: Some(parent.clone()),
             children: vec![],
         };
@@ -47,5 +51,19 @@ impl EntityGraph {
 
     pub fn contains(&self, entity: &EntityId) -> bool {
         self.nodes.contains_key(entity)
+    }
+
+    pub fn node(&self, id: &EntityId) -> Option<&Node> {
+        self.nodes.get(id)
+    }
+}
+
+impl Node {
+    pub fn children(&self) -> &Vec<EntityId> {
+        &self.children
+    }
+
+    pub fn parent(&self) -> Option<EntityId> {
+        self.parent.clone()
     }
 }

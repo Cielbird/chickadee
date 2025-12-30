@@ -39,18 +39,22 @@ impl Transform {
         rotation.z.truncate()
     }
 
+    // TODO make "translate" funciton with parameter "space"
+    /// Translate the transform with global coordinates
     pub fn move_global(&mut self, vector: Vector3<f32>) {
         self.position += vector;
     }
 
-    pub fn move_local(&mut self, move_vec: Vector3<f32>) { // TODO remove "local" operations: not necessary with the entity tree
-        //let local_vec = self.rotation_matrix().inverse_transform().unwrap() * Matrix4::from_translation(vector);
+    /// Translate the transform relative to its rotation
+    pub fn move_local(&mut self, move_vec: Vector3<f32>) {
+        // TODO take into account scale..? 
         let translation = self.rotation_matrix()
             * Matrix4::from_translation(move_vec)
             * self.rotation_matrix().inverse_transform().unwrap();
         self.position = translation.transform_point(self.position);
     }
 
+    #[allow(unused)]
     pub fn rotate_euler_local(&mut self, euler: Vector3<f32>) {
         let x_rotation = Quaternion::from_angle_x(Rad(-euler.x)); // FIXME negative is ultra sus, but it works
         let y_rotation = Quaternion::from_angle_y(Rad(-euler.y));
@@ -110,5 +114,15 @@ impl Transform {
             rotation: rotation,
             scale: scale,
         }
+    }
+}
+
+
+impl std::ops::Mul for Transform {
+    type Output = Transform;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let out_mat = self.matrix() * rhs.matrix();
+        Transform::from_matrix(out_mat)
     }
 }

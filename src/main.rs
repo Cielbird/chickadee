@@ -20,7 +20,7 @@ fn main() {
         .add_entity(player.clone(), "player_cam".to_string())
         .unwrap();
 
-    let cam_transform = scene.get_tranform_mut(&player_cam).unwrap();
+    let cam_transform = scene.get_transform_mut(&player_cam).unwrap();
     cam_transform.move_global(Vector3::new(0., 2., 0.));
 
     let camera = Camera::new();

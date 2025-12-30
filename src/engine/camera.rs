@@ -56,10 +56,15 @@ impl Component for Camera {
 
     fn on_update(&mut self, scene: &mut Scene, context: OnUpdateContext) {
         // update projection matrix from entity's transform
-        let camera_transform = scene.get_tranform_ref(&context.entity).unwrap();
+        let camera_transform = scene.get_transform_ref(&context.entity).unwrap();
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        self.view_projection_matrix =
-            OPENGL_TO_WGPU_MATRIX * proj * camera_transform.matrix().inverse_transform().unwrap();
+        self.view_projection_matrix = OPENGL_TO_WGPU_MATRIX
+            * proj
+            * camera_transform
+                .global_ref()
+                .matrix()
+                .inverse_transform()
+                .unwrap();
     }
 
     fn on_event(&mut self, _scene: &mut Scene, _context: OnEventContext) {
