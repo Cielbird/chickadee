@@ -30,6 +30,7 @@ pub struct Renderer<'a> {
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     depth_texture: texture::Texture,
+    texture_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 // rename, and make a lighting pass struct
@@ -100,13 +101,11 @@ impl<'a> Renderer<'a> {
 
         let mut models = vec![];
 
-        let model_fut = load_model("cube/cube.obj", &device, &queue, &texture_bind_group_layout);
+        let model_fut = load_model("cube/cube.obj");
         let model = pollster::block_on(model_fut).expect("coulnd't load model");
 
         let voxel_chunk = VoxelChunk::new();
-        let voxels = voxel_chunk
-            .get_model(&device, &queue, &texture_bind_group_layout)
-            .unwrap();
+        let voxels = voxel_chunk.get_model().unwrap();
 
         models.push(voxels);
         models.push(model);
@@ -127,6 +126,7 @@ impl<'a> Renderer<'a> {
             camera_uniform,
             camera_buffer,
             depth_texture,
+            texture_bind_group_layout,
         }
     }
 
@@ -522,9 +522,15 @@ impl<'a> Renderer<'a> {
 
             for i in 0..self.models.len() {
                 self.models
-                    .get(i)
+                    .get_mut(i)
                     .unwrap()
-                    .draw_model(&mut render_pass, &self.camera_bind_group)
+                    .draw_model(
+                        &self.device,
+                        &self.queue,
+                        &mut render_pass,
+                        &self.camera_bind_group,
+                        &self.texture_bind_group_layout,
+                    )
                     .unwrap();
             }
         }

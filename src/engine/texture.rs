@@ -2,6 +2,7 @@ use image::GenericImageView;
 
 use super::error::*;
 
+/// GPU buffers for a texture/image
 pub struct Texture {
     #[allow(unused)]
     pub texture: wgpu::Texture,
@@ -10,16 +11,6 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn from_bytes(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        bytes: &[u8],
-        label: &str,
-    ) -> Result<Self> {
-        let img = image::load_from_memory(bytes)?;
-        Self::from_image(device, queue, &img, Some(label))
-    }
-
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,

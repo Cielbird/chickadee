@@ -5,7 +5,7 @@ use std::{
 
 use wgpu::util::DeviceExt;
 
-use super::{error::*, model, texture};
+use super::{error::*, model};
 
 fn load_binary(file_name: &str) -> Result<Vec<u8>> {
     let path = std::path::Path::new(env!("OUT_DIR"))
@@ -23,20 +23,15 @@ pub fn load_string(file_name: &str) -> Result<String> {
     Ok(txt)
 }
 
-pub fn load_texture(
+pub fn load_image(
     file_name: &str,
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-) -> Result<texture::Texture> {
+) -> Result<image::DynamicImage> {
     let data = load_binary(file_name)?;
-    texture::Texture::from_bytes(device, queue, &data, file_name)
+    image::load_from_memory(&data).map_err(|e| Error::ImageError(e))
 }
 
 pub async fn load_model(
     file_name: &str,
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    layout: &wgpu::BindGroupLayout,
 ) -> Result<model::Model> {
     // path all files for the model will be relative to
     let parent_path = Path::new(file_name)
@@ -68,29 +63,13 @@ pub async fn load_model(
         // texure path is relative to material
         let pb = parent_path.join(m.diffuse_texture);
         let p = pb.to_str().expect("fatal path error");
-        println!("{:?}", p);
-        let diffuse_texture = load_texture(p, device, queue)?;
-        println!("asdf");
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },
-            ],
-            label: None,
-        });
+        let diffuse_texture = load_image(p)?;
 
         materials.push(model::Material {
             name: m.name,
-            diffuse_texture,
-            bind_group,
+            diffuse_image: diffuse_texture,
+            dirty: true,
+            buffers: None,
         })
     }
 
@@ -126,24 +105,18 @@ pub async fn load_model(
                     }
                 })
                 .collect::<Vec<_>>();
+            
+            let indices = m.mesh.indices.clone();
 
-            let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(&format!("{:?} Vertex Buffer", file_name)),
-                contents: bytemuck::cast_slice(&vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-            let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(&format!("{:?} Index Buffer", file_name)),
-                contents: bytemuck::cast_slice(&m.mesh.indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
+            let material = m.mesh.material_id.unwrap_or(0);
 
             model::Mesh {
-                name: file_name.to_string(),
-                vertex_buffer,
-                index_buffer,
-                num_elements: m.mesh.indices.len() as u32,
-                material: m.mesh.material_id.unwrap_or(0),
+                name: file_name.to_string(), 
+                vertices,
+                material,
+                indices,
+                dirty: true,
+                buffers: None,
             }
         })
         .collect::<Vec<_>>();

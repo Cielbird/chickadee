@@ -5,6 +5,7 @@ use std::sync::{Arc, RwLock};
 use crate::engine::component::{Component, ComponentId, ComponentRef};
 use crate::engine::entity::Entity;
 use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
+use crate::engine::model::Model;
 use crate::engine::transform::Transform;
 
 use super::{component::DynComponentRef, entity::EntityId};
@@ -46,6 +47,21 @@ impl Scene {
         render_pass: &mut wgpu::RenderPass,
         camera_bind_group: &wgpu::BindGroup,
     ) -> Result<()> {
+        // iterate on all components, render renderable components
+        for (entity_id, component_ids) in self.entities.clone() {
+            for component_id in component_ids.components {
+                let component = self
+                    .components
+                    .get(&component_id)
+                    .expect("Component not found, scene corrupted!")
+                    .clone();
+                // TODO render each model
+                // if let Ok(model) = component.try_into() {
+                //     let model: Model = model;
+                //     model.draw_model(render_pass, camera_bind_group);
+                // }
+            }
+        }
         Ok(())
     }
 

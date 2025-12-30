@@ -1,13 +1,12 @@
 use cgmath::Point3;
 use noise::{NoiseFn, Perlin};
-use wgpu::{util::DeviceExt, Device, Queue};
+
+use crate::engine::resources::load_image;
 
 use super::{
     error::*,
     model::{self, Mesh, Model, ModelVertex},
 };
-
-use crate::engine::resources::load_texture;
 
 const CHUNK_SIZE: usize = 8;
 const VOXEL_SIZE: f32 = 1.0;
@@ -22,6 +21,7 @@ enum VoxelState {
     FULL,
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 enum FaceDir {
     X_POS,
@@ -66,35 +66,16 @@ impl VoxelChunk {
         chunk
     }
 
-    pub fn get_model(
-        &self,
-        device: &Device,
-        queue: &Queue,
-        layout: &wgpu::BindGroupLayout,
-    ) -> Result<Model> {
-        let mesh = self.get_mesh(device)?;
+    pub fn get_model(&self) -> Result<Model> {
+        let mesh = self.get_mesh()?;
 
-        let diffuse_texture = load_texture("cube/cube-diffuse.png", device, queue)?;
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },
-            ],
-            label: None,
-        });
+        let diffuse_image = load_image("cube/cube-diffuse.png")?;
 
         let material = model::Material {
             name: "Voxel Material".to_string(),
-            diffuse_texture,
-            bind_group,
+            diffuse_image,
+            dirty: true,
+            buffers: None,
         };
 
         Ok(Model {
@@ -103,9 +84,9 @@ impl VoxelChunk {
         })
     }
 
-    fn get_mesh(&self, device: &Device) -> Result<Mesh> {
+    fn get_mesh(&self) -> Result<Mesh> {
         let mut vertices = vec![];
-        let mut indices: Vec<i32> = vec![];
+        let mut indices: Vec<u32> = vec![];
         let mut num_verts = 0;
 
         for i in 0..CHUNK_SIZE {
@@ -123,24 +104,14 @@ impl VoxelChunk {
             }
         }
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Some Vertex Buffer"),
-            contents: bytemuck::cast_slice(vertices.as_slice()),
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Some index Buffer"),
-            contents: bytemuck::cast_slice(indices.as_slice()),
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-        });
-
         let mesh = Mesh {
+            // TODO new constructor for this
             name: "Voxel Mesh".to_string(),
-            vertex_buffer,
-            index_buffer,
-            num_elements: indices.len() as u32,
+            vertices,
+            indices,
             material: 0,
+            dirty: true,
+            buffers: None,
         };
         println!("mesh: {:?}", mesh);
 
@@ -150,7 +121,7 @@ impl VoxelChunk {
     fn add_voxel_faces(
         &self,
         vertices: &mut Vec<ModelVertex>,
-        indices: &mut Vec<i32>,
+        indices: &mut Vec<u32>,
         num_verts: &mut usize,
         voxel_indices: cgmath::Point3<usize>,
     ) {
@@ -194,7 +165,7 @@ impl VoxelChunk {
 
     fn add_voxel_face(
         vertices: &mut Vec<ModelVertex>,
-        indices: &mut Vec<i32>,
+        indices: &mut Vec<u32>,
         num_verts: &mut usize,
         facing_dir: FaceDir,
         origin: Point3<f32>,
@@ -381,7 +352,7 @@ impl VoxelChunk {
             _ => return,
         }
 
-        let first_index = *num_verts as i32;
+        let first_index = *num_verts as u32;
         indices.push(first_index);
         indices.push(first_index + 1);
         indices.push(first_index + 2);

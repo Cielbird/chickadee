@@ -5,6 +5,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
 
+/// Handles running the engine for the winit window
 pub struct EngineHandler {}
 
 impl<'a> EngineHandler {
