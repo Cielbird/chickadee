@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::engine::{component::ComponentId, transform::Transform};
+use crate::{component::ComponentId, transform::Transform};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EntityId {
@@ -57,17 +57,17 @@ impl EntityTransform {
         &self.global
     }
 
-    pub(crate) fn move_global(&mut self, vec: cgmath::Vector3<f32>) {
+    pub fn move_global(&mut self, vec: cgmath::Vector3<f32>) {
         self.dirty = true;
         self.local.move_global(vec)
     }
 
-    pub(crate) fn move_local(&mut self, vec: cgmath::Vector3<f32>) {
+    pub fn move_local(&mut self, vec: cgmath::Vector3<f32>) {
         self.dirty = true;
         self.local.move_local(vec)
     }
 
-    pub(crate) fn rotate_euler_global(&mut self, euler: cgmath::Vector3<f32>) {
+    pub fn rotate_euler_global(&mut self, euler: cgmath::Vector3<f32>) {
         self.dirty = true;
         self.local.rotate_euler_global(euler)
     }

@@ -1,4 +1,4 @@
-use crate::engine::engine::get_engine;
+use crate::engine::get_engine;
 
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;

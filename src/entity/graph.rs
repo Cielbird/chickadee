@@ -1,5 +1,5 @@
 use super::base::EntityId;
-use crate::engine::error::*;
+use crate::error::*;
 use std::collections::HashMap;
 
 /// Module for the entity graph

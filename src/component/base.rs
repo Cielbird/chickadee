@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
+use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 
 use super::super::scene::Scene;
 

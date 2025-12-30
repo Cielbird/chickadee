@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use winit::{event::WindowEvent, window::Window};
 
-use crate::engine::handler::EngineHandler;
+use crate::handler::EngineHandler;
 
 use super::{render::Renderer, scene::Scene};
 

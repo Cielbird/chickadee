@@ -1,6 +1,6 @@
 use cgmath::{Matrix4, Transform, Zero};
 
-use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
+use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 
 use super::{component::Component, scene::Scene};
 

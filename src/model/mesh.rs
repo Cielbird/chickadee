@@ -1,6 +1,6 @@
 use wgpu::{util::DeviceExt as _, Device};
 
-use crate::engine::{model::Vertex, transform::Transform};
+use crate::{model::Vertex, transform::Transform};
 
 #[derive(Debug)]
 pub struct Mesh {

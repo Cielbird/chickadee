@@ -1,4 +1,4 @@
-use crate::engine::{
+use crate::{
     component::Component,
     model::{Material, Mesh},
     transform::Transform,

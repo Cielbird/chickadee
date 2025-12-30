@@ -1,6 +1,6 @@
 use wgpu::{Device, Queue};
 
-use crate::engine::texture::{self, Texture};
+use crate::texture::{self, Texture};
 
 pub struct Material {
     pub name: String,

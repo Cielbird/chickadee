@@ -1,10 +1,10 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
-use crate::engine::component::{Component, ComponentId, ComponentRef};
-use crate::engine::entity::{Entity, EntityTransform};
-use crate::engine::event::{OnEventContext, OnStartContext, OnUpdateContext};
-use crate::engine::model::Model;
+use crate::component::{Component, ComponentId, ComponentRef};
+use crate::entity::{Entity, EntityTransform};
+use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
+use crate::model::Model;
 
 use super::{component::DynComponentRef, entity::EntityId};
 
@@ -198,11 +198,11 @@ impl Scene {
         transforms
     }
 
-    pub(crate) fn get_entity(&self, comp_id: &ComponentId) -> Option<EntityId> {
+    pub fn get_entity(&self, comp_id: &ComponentId) -> Option<EntityId> {
         self.component_entities.get(comp_id).cloned()
     }
 
-    pub(crate) fn parent(&self, child_id: &EntityId) -> Option<EntityId> {
+    pub fn parent(&self, child_id: &EntityId) -> Option<EntityId> {
         let graph = self.entity_graph.read().unwrap();
         graph.node(child_id)?.parent()
     }

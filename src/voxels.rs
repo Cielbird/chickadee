@@ -1,7 +1,7 @@
 use cgmath::Point3;
 use noise::{NoiseFn, Perlin};
 
-use crate::engine::resources::load_image;
+use crate::resources::load_image;
 
 use super::{
     error::*,

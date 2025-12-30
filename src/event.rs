@@ -1,7 +1,7 @@
 #![allow(unused)]
 use winit::event::WindowEvent;
 
-use crate::engine::{component::ComponentId, entity::EntityId};
+use crate::{component::ComponentId, entity::EntityId};
 
 pub struct OnStartContext {
     /// Context: current caller's information
