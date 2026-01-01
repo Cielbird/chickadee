@@ -446,8 +446,8 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.camera_uniform
-            .update_view_proj(&self.scene.read().unwrap());
+        let scene = self.scene.read().unwrap();
+        self.camera_uniform.update_view_proj(&scene);
         self.queue.write_buffer(
             &self.camera_buffer,
             0,
@@ -498,10 +498,9 @@ impl<'a> Renderer<'a> {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+
             // render scene
-            self.scene
-                .read()
-                .unwrap()
+            scene
                 .draw_scene(
                     &mut render_pass,
                     &self.device,

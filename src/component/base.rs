@@ -1,6 +1,8 @@
 use std::{
-    any::Any,
-    sync::{Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    any::{self, Any},
+    sync::{
+        Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard, TryLockError, TryLockResult,
+    },
 };
 
 use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
@@ -15,6 +17,7 @@ pub trait Component: Any + Send + Sync + 'static {
 
 #[derive(Clone)]
 pub struct DynComponentRef {
+    type_id: any::TypeId,
     inner: Arc<RwLock<dyn Component>>,
 }
 
@@ -24,37 +27,58 @@ pub struct ComponentRef<C: Component> {
 }
 
 impl<C: Component> ComponentRef<C> {
-    pub fn get_ref<'a>(&'a self) -> LockResult<RwLockReadGuard<'a, C>> {
-        // TODO use AsRef trait
+    pub fn read<'a>(&'a self) -> LockResult<RwLockReadGuard<'a, C>> {
         self.inner.read()
     }
 
     #[allow(unused)]
-    pub fn get_mut<'a>(&'a mut self) -> LockResult<RwLockWriteGuard<'a, C>> {
-        // TODO use AsMut trait
+    pub fn write<'a>(&'a mut self) -> LockResult<RwLockWriteGuard<'a, C>> {
         self.inner.write()
+    }
+
+    #[allow(unused)]
+    pub fn try_read<'a>(&'a mut self) -> TryLockResult<RwLockReadGuard<'a, C>> {
+        self.inner.try_read()
+    }
+
+    #[allow(unused)]
+    pub fn try_write<'a>(&'a mut self) -> TryLockResult<RwLockWriteGuard<'a, C>> {
+        self.inner.try_write()
     }
 }
 
 impl DynComponentRef {
     pub fn new<C: Component>(component: C) -> Self {
+        let type_id = any::TypeId::of::<C>();
         let inner = Arc::new(RwLock::new(component));
-        Self { inner }
+        Self { type_id, inner }
     }
 
-    pub fn on_start(&self, scene: &mut Scene, context: OnStartContext) {
-        let mut inner = self.inner.write().unwrap();
+    pub fn try_on_start(&self, scene: &mut Scene, context: OnStartContext) -> TryLockResult<()> {
+        let mut inner = self.inner.try_write().map_err(|err| match err {
+            TryLockError::Poisoned(_err) => panic!("Component lock poisoned!"),
+            TryLockError::WouldBlock => TryLockError::<()>::WouldBlock,
+        })?;
         inner.on_start(scene, context);
+        Ok(())
     }
 
-    pub fn on_update(&self, scene: &mut Scene, context: OnUpdateContext) {
-        let mut inner = self.inner.write().unwrap();
+    pub fn try_on_update(&self, scene: &mut Scene, context: OnUpdateContext) -> TryLockResult<()> {
+        let mut inner = self.inner.try_write().map_err(|err| match err {
+            TryLockError::Poisoned(_err) => panic!("Component lock poisoned!"),
+            TryLockError::WouldBlock => TryLockError::<()>::WouldBlock,
+        })?;
         inner.on_update(scene, context);
+        Ok(())
     }
 
-    pub fn on_event(&self, scene: &mut Scene, context: OnEventContext) {
-        let mut inner = self.inner.write().unwrap();
+    pub fn try_on_event(&self, scene: &mut Scene, context: OnEventContext) -> TryLockResult<()> {
+        let mut inner = self.inner.try_write().map_err(|err| match err {
+            TryLockError::Poisoned(_err) => panic!("Component lock poisoned!"),
+            TryLockError::WouldBlock => TryLockError::<()>::WouldBlock,
+        })?;
         inner.on_event(scene, context);
+        Ok(())
     }
 
     unsafe fn downcast_unchecked<C: Component>(self) -> ComponentRef<C> {
@@ -71,10 +95,7 @@ impl<C: Component> TryInto<ComponentRef<C>> for DynComponentRef {
     type Error = String;
 
     fn try_into(self) -> Result<ComponentRef<C>, Self::Error> {
-        let is_type_match = {
-            let inner = self.inner.read().unwrap();
-            (&*inner as &dyn Any).is::<C>()
-        };
+        let is_type_match = self.type_id == any::TypeId::of::<C>();
         if is_type_match {
             Ok(unsafe { self.downcast_unchecked() })
         } else {

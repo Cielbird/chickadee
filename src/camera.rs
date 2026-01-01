@@ -31,11 +31,11 @@ impl CameraUniform {
 
     pub fn update_view_proj(&mut self, scene: &Scene) {
         if let Some((_id, cam)) = scene.find_first_component::<Camera>() {
-            if let Ok(cam) = cam.get_ref() {
+            if let Ok(cam) = cam.read() {
                 self.view_proj = cam.get_view_projection_matrix().into();
             }
         } else {
-            println!("No camera in scene!");
+            panic!("No camera in scene!");
         }
     }
 }
@@ -50,13 +50,12 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 );
 
 impl Component for Camera {
-    fn on_start(&mut self, _scene: &mut Scene, _context: OnStartContext) {
-        return;
-    }
+    fn on_start(&mut self, _scene: &mut Scene, _context: OnStartContext) {}
 
     fn on_update(&mut self, scene: &mut Scene, context: OnUpdateContext) {
         // update projection matrix from entity's transform
-        let camera_transform = scene.get_transform_ref(&context.entity).unwrap();
+        let camera_transform = scene.get_transform(&context.entity);
+        let camera_transform = camera_transform.read().unwrap();
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
         self.view_projection_matrix = OPENGL_TO_WGPU_MATRIX
             * proj

@@ -1,6 +1,5 @@
 mod base;
 /// Module for entities and the entity graph
-mod graph;
+pub(crate) mod transform;
 
 pub use base::*;
-pub use graph::EntityGraph;
