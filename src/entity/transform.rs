@@ -1,4 +1,4 @@
-use crate::{transform::Transform, Component};
+use crate::{transform::Transform, Component, Vector3};
 
 #[derive(Debug, Clone)]
 pub struct EntityTransform {
@@ -26,26 +26,26 @@ impl EntityTransform {
         &self.global
     }
 
-    pub fn move_global(&mut self, vec: cgmath::Vector3<f32>) {
+    pub fn translate_global(&mut self, vec: Vector3) {
         self.dirty = true;
-        self.local.move_global(vec)
+        self.local.translate_global(vec)
     }
 
-    pub fn move_local(&mut self, vec: cgmath::Vector3<f32>) {
+    pub fn translate_local(&mut self, vec: Vector3) {
         self.dirty = true;
-        self.local.move_local(vec)
+        self.local.translate_local(vec)
     }
 
-    pub fn rotate_euler_global(&mut self, euler: cgmath::Vector3<f32>) {
+    pub fn rotate_euler_global(&mut self, euler: Vector3) {
         self.dirty = true;
         self.local.rotate_euler_global(euler)
     }
 }
 
 impl Component for EntityTransform {
-    fn on_start(&mut self, scene: &mut crate::Scene, context: crate::OnStartContext) {}
+    fn on_start(&mut self, _scene: &mut crate::Scene, _context: crate::OnStartContext) {}
 
-    fn on_update(&mut self, scene: &mut crate::Scene, context: crate::OnUpdateContext) {}
+    fn on_update(&mut self, _scene: &mut crate::Scene, _context: crate::OnUpdateContext) {}
 
-    fn on_event(&mut self, scene: &mut crate::Scene, context: crate::OnEventContext) {}
+    fn on_event(&mut self, _scene: &mut crate::Scene, _context: crate::OnEventContext) {}
 }

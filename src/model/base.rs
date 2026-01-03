@@ -42,8 +42,12 @@ impl Model {
         }
         let mesh_buffers = mesh.buffers.as_mut().unwrap();
 
+        if mesh_buffers.empty() {
+            return Ok(());
+        }
+
         // update instance buffer (mesh's rendered transform)
-        let instance_data = [transform.to_instance_raw()];
+        let instance_data = [transform.to_raw()];
         let data: &[u8] = bytemuck::cast_slice(&instance_data);
         queue.write_buffer(&mesh_buffers.instance_buffer, 0, data);
 

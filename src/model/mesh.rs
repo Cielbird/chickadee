@@ -23,6 +23,13 @@ pub struct MeshBuffers {
     pub instance_buffer: wgpu::Buffer,
 }
 
+/// Used for representing each instance (it's transform) in the shader
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct TransformRaw {
+    model: [[f32; 4]; 4],
+}
+
 impl Mesh {
     /// Update GPU buffers according to data in CPU buffers
     pub fn reinit_buffers(&mut self, device: &Device) {
@@ -40,7 +47,7 @@ impl Mesh {
 
         let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&[Transform::identity().to_instance_raw()]), // only one instance
+            contents: bytemuck::cast_slice(&[Transform::identity().to_raw()]), // only one instance
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -53,17 +60,17 @@ impl Mesh {
     }
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct InstanceRaw {
-    model: [[f32; 4]; 4],
+impl MeshBuffers {
+    pub fn empty(&self) -> bool {
+        self.vertex_buffer.size() == 0
+    }
 }
 
-impl InstanceRaw {
+impl TransformRaw {
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;
         wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<InstanceRaw>() as wgpu::BufferAddress,
+            array_stride: mem::size_of::<TransformRaw>() as wgpu::BufferAddress,
             // We need to switch from using a step mode of Vertex to Instance
             // This means that our shaders will only change to use the next
             // instance when the shader starts processing a new instance
@@ -99,9 +106,8 @@ impl InstanceRaw {
 }
 
 impl Transform {
-    // TODO refactor, maybe
-    pub fn to_instance_raw(&self) -> InstanceRaw {
-        InstanceRaw {
+    pub fn to_raw(&self) -> TransformRaw {
+        TransformRaw {
             model: self.matrix().into(),
         }
     }

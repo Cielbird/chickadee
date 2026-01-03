@@ -11,6 +11,7 @@ mod resources;
 mod scene;
 mod texture;
 mod transform;
+mod types;
 
 mod api;
 

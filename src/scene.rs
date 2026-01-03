@@ -159,7 +159,7 @@ impl Scene {
                 OnEventContext {
                     entity: entity_id.clone(),
                     component: component_id,
-                    event: event.clone(),
+                    event: event.into(),
                 },
             );
         }

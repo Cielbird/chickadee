@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 
-use winit::{event::WindowEvent, window::Window};
+use winit::{dpi::PhysicalPosition, event::WindowEvent, window::Window};
 
 use crate::handler::EngineHandler;
 
@@ -46,7 +46,7 @@ impl Engine {
         });
     }
 
-    pub fn set_window(&mut self, window: Window) {
+    pub(crate) fn set_window(&mut self, window: Window) {
         let window = Arc::new(window);
         self.window = Some(window.clone());
 
@@ -54,8 +54,45 @@ impl Engine {
         self.renderer = Some(Mutex::new(renderer))
     }
 
-    pub fn get_window(&self) -> Arc<Window> {
-        self.window.clone().unwrap()
+    /// Set the capture state of the cursor. When captured, the cursor should be locked and
+    /// invisible, otherwise, it is free and visible
+    pub fn set_cursor_captured(&self, captured: bool) {
+        if let Some(window) = &self.window {
+            let mode = if captured {
+                winit::window::CursorGrabMode::Locked
+            } else {
+                winit::window::CursorGrabMode::None
+            };
+            window.set_cursor_grab(mode).ok();
+            window.set_cursor_visible(!captured);
+        }
+    }
+
+    pub fn set_cursor_position(&self, x: f32, y: f32) -> Result<(), ()> {
+        if let Some(window) = &self.window {
+            window
+                .set_cursor_position(PhysicalPosition::new(x, y))
+                .map_err(|_e| ())?;
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+
+    /// Returns (width, height)
+    pub fn window_size(&self) -> Option<(u32, u32)> {
+        if let Some(window) = &self.window {
+            let size = window.inner_size();
+            Some((size.width, size.height))
+        } else {
+            None
+        }
+    }
+
+    pub fn redraw(&self) {
+        if let Some(window) = &self.window {
+            window.request_redraw();
+        }
     }
 
     pub fn set_scene(scene: Scene) {

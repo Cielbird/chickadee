@@ -5,7 +5,7 @@ use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-use crate::model::InstanceRaw;
+use crate::model::TransformRaw;
 
 use super::super::{
     camera::CameraUniform,
@@ -229,8 +229,8 @@ impl<'a> Renderer<'a> {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Pre-Processed Frame Texture"),
             size: wgpu::Extent3d {
-                width: 400,  // was 1600
-                height: 300, // was 1200
+                width: 800,  // was 1600
+                height: 500, // was 1200
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -337,14 +337,14 @@ impl<'a> Renderer<'a> {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[Vertex::desc(), InstanceRaw::desc()],
+                buffers: &[Vertex::desc(), TransformRaw::desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: config.format, // TODO See this. we are not writing to a normal surface
+                    format: config.format, // we are not writing to a normal surface
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],

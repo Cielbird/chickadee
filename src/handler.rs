@@ -59,7 +59,6 @@ impl ApplicationHandler for EngineHandler {
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         let engine = get_engine();
         let engine = engine.read().unwrap();
-        let window = engine.get_window();
-        window.request_redraw();
+        engine.redraw();
     }
 }

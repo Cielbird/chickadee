@@ -1,25 +1,33 @@
-use cgmath::{
-    point3, EuclideanSpace, InnerSpace, Matrix3, Matrix4, One, Point3, Quaternion, Rad, Rotation3,
-    Vector3,
-};
+use cgmath::{EuclideanSpace, InnerSpace, Matrix3, One, Rad, Rotation3};
 
 use cgmath::Transform as CgTransform;
+
+use crate::Matrix4;
+use crate::Vector3;
 
 ///
 /// +z is out of the screen
 #[derive(Debug, Clone)]
 pub struct Transform {
-    pub position: Point3<f32>,
-    pub rotation: Quaternion<f32>,
-    pub scale: Vector3<f32>,
+    pub position: cgmath::Point3<f32>,
+    pub rotation: cgmath::Quaternion<f32>,
+    pub scale: cgmath::Vector3<f32>,
+}
+
+pub enum TransformSpace {
+    Local,
+    Global,
 }
 
 impl Transform {
     #[allow(unused)]
-    pub fn set_euler_rotation(&mut self, euler: Vector3<f32>) {
-        let x_rotation = Quaternion::from_axis_angle(Vector3::unit_x(), Rad(euler.x));
-        let y_rotation = Quaternion::from_axis_angle(Vector3::unit_y(), Rad(euler.y));
-        let z_rotation = Quaternion::from_axis_angle(Vector3::unit_z(), Rad(euler.z));
+    pub fn set_euler_rotation(&mut self, euler: Vector3) {
+        let x_rotation =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_x(), Rad(euler.x));
+        let y_rotation =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_y(), Rad(euler.y));
+        let z_rotation =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), Rad(euler.z));
 
         self.rotation = z_rotation * y_rotation * x_rotation;
     }
@@ -27,72 +35,82 @@ impl Transform {
     /// The identity transform: T(x) = x
     pub fn identity() -> Self {
         Self {
-            position: point3(0., 0., 0.),
-            rotation: Quaternion::one(),
-            scale: Vector3::new(1., 1., 1.),
+            position: cgmath::point3(0., 0., 0.),
+            rotation: cgmath::Quaternion::one(),
+            scale: cgmath::Vector3::new(1., 1., 1.),
         }
     }
 
     #[allow(unused)]
-    pub fn forward(&self) -> Vector3<f32> {
-        let rotation = Matrix4::from(self.rotation);
+    pub fn forward(&self) -> Vector3 {
+        let rotation = cgmath::Matrix4::from(self.rotation);
         rotation.z.truncate()
     }
 
-    // TODO make "translate" funciton with parameter "space"
+    pub fn translate(&mut self, translation: Vector3, space: TransformSpace) {
+        match space {
+            TransformSpace::Local => {
+                self.translate_local(translation);
+            }
+            TransformSpace::Global => {
+                self.translate_global(translation);
+            }
+        }
+    }
+
     /// Translate the transform with global coordinates
-    pub fn move_global(&mut self, vector: Vector3<f32>) {
-        self.position += vector;
+    pub fn translate_global(&mut self, translation: Vector3) {
+        self.position += translation;
     }
 
     /// Translate the transform relative to its rotation
-    pub fn move_local(&mut self, move_vec: Vector3<f32>) {
+    pub fn translate_local(&mut self, translation: Vector3) {
         // TODO take into account scale..?
         let translation = self.rotation_matrix()
-            * Matrix4::from_translation(move_vec)
+            * Matrix4::from_translation(translation)
             * self.rotation_matrix().inverse_transform().unwrap();
         self.position = translation.transform_point(self.position);
     }
 
     #[allow(unused)]
-    pub fn rotate_euler_local(&mut self, euler: Vector3<f32>) {
-        let x_rotation = Quaternion::from_angle_x(Rad(-euler.x)); // FIXME negative is ultra sus, but it works
-        let y_rotation = Quaternion::from_angle_y(Rad(-euler.y));
-        let z_rotation = Quaternion::from_angle_z(Rad(-euler.z));
+    pub fn rotate_euler_local(&mut self, euler: Vector3) {
+        let x_rotation = cgmath::Quaternion::from_angle_x(Rad(-euler.x));
+        let y_rotation = cgmath::Quaternion::from_angle_y(Rad(-euler.y));
+        let z_rotation = cgmath::Quaternion::from_angle_z(Rad(-euler.z));
 
         let rotation = z_rotation * y_rotation * x_rotation;
         self.rotation = self.rotation * rotation;
     }
 
-    pub fn rotate_euler_global(&mut self, euler: Vector3<f32>) {
-        let x_rotation = Quaternion::from_angle_x(Rad(-euler.x)); // FIXME negative is ultra sus, but it works
-        let y_rotation = Quaternion::from_angle_y(Rad(-euler.y));
-        let z_rotation = Quaternion::from_angle_z(Rad(-euler.z));
+    pub fn rotate_euler_global(&mut self, euler: Vector3) {
+        let x_rotation = cgmath::Quaternion::from_angle_x(Rad(-euler.x));
+        let y_rotation = cgmath::Quaternion::from_angle_y(Rad(-euler.y));
+        let z_rotation = cgmath::Quaternion::from_angle_z(Rad(-euler.z));
 
         let rotation = z_rotation * y_rotation * x_rotation;
         self.rotation = rotation * self.rotation;
     }
 
-    pub fn matrix(&self) -> Matrix4<f32> {
+    pub fn matrix(&self) -> Matrix4 {
         self.position_matrix() * self.scale_matrix() * self.rotation_matrix()
     }
 
-    fn rotation_matrix(&self) -> Matrix4<f32> {
+    fn rotation_matrix(&self) -> Matrix4 {
         Matrix4::from(self.rotation)
     }
 
-    fn scale_matrix(&self) -> Matrix4<f32> {
+    fn scale_matrix(&self) -> Matrix4 {
         Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z)
     }
 
-    fn position_matrix(&self) -> Matrix4<f32> {
+    fn position_matrix(&self) -> Matrix4 {
         Matrix4::from_translation(self.position.to_vec())
     }
 
     #[allow(unused)]
-    pub fn from_matrix(matrix: Matrix4<f32>) -> Self {
+    pub fn from_matrix(matrix: Matrix4) -> Self {
         // 1. Extract translation (global position)
-        let translation = Point3::from_homogeneous(matrix.w);
+        let translation = cgmath::Point3::from_homogeneous(matrix.w);
 
         // 2. Extract scale from the x, y, z columns (basis vectors)
         let scale_x = matrix.x.truncate().magnitude();
@@ -107,7 +125,7 @@ impl Transform {
             matrix.z.truncate() / scale_z,
         );
         // Convert the rotation matrix into a quaternion
-        let rotation = Quaternion::from(rotation_matrix);
+        let rotation = cgmath::Quaternion::from(rotation_matrix);
 
         Self {
             position: translation,
