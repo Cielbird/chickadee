@@ -104,14 +104,7 @@ pub async fn load_model(file_name: &str) -> Result<model::Model> {
 
             let material = m.mesh.material_id.unwrap_or(0);
 
-            model::Mesh {
-                name: file_name.to_string(),
-                vertices,
-                material,
-                indices,
-                dirty: true,
-                buffers: None,
-            }
+            model::Mesh::new(file_name.to_string(), vertices, indices, material)
         })
         .collect::<Vec<_>>();
 

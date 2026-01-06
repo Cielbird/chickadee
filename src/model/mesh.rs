@@ -31,6 +31,17 @@ pub struct TransformRaw {
 }
 
 impl Mesh {
+    pub fn new(name: String, vertices: Vec<Vertex>, indices: Vec<u32>, material: usize) -> Self {
+        Self {
+            name,
+            vertices,
+            indices,
+            material,
+            dirty: true,
+            buffers: None,
+        }
+    }
+
     /// Update GPU buffers according to data in CPU buffers
     pub fn reinit_buffers(&mut self, device: &Device) {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
