@@ -18,7 +18,7 @@ pub struct Camera {
 pub struct CameraUniform {
     // We can't use cgmath with bytemuck directly, so we'll have
     // to convert the Matrix4 into a 4x4 f32 array
-    view_proj: [[f32; 4]; 4],
+    pub(crate) view_proj: [[f32; 4]; 4],
 }
 
 impl CameraUniform {
@@ -26,16 +26,6 @@ impl CameraUniform {
         use cgmath::SquareMatrix;
         Self {
             view_proj: cgmath::Matrix4::identity().into(),
-        }
-    }
-
-    pub fn update_view_proj(&mut self, scene: &Scene) {
-        if let Some((_id, cam)) = scene.find_first_component::<Camera>() {
-            if let Ok(cam) = cam.read() {
-                self.view_proj = cam.get_view_projection_matrix().into();
-            }
-        } else {
-            panic!("No camera in scene!");
         }
     }
 }
@@ -75,14 +65,18 @@ impl Camera {
     pub fn new() -> Self {
         Camera {
             view_projection_matrix: Matrix4::zero(),
-            aspect: 1., //config.width as f32 / config.height as f32,
+            aspect: 1.0,
             fovy: 45.0,
             znear: 0.1,
             zfar: 100.0,
         }
     }
 
-    fn get_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+    pub fn update_aspect(&mut self, width: f32, height: f32) {
+        self.aspect = width / height
+    }
+
+    pub fn get_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         self.view_projection_matrix.clone()
     }
 }

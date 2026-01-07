@@ -1,11 +1,11 @@
 use std::sync::{Arc, RwLock};
 
 use pollster::FutureExt;
-use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
+use wgpu::{BindGroup, BindGroupLayout, Buffer, Device, util::DeviceExt};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-use crate::model::TransformRaw;
+use crate::{Camera, model::TransformRaw};
 
 use super::super::{
     camera::CameraUniform,
@@ -447,7 +447,17 @@ impl<'a> Renderer<'a> {
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let scene = self.scene.read().unwrap();
-        self.camera_uniform.update_view_proj(&scene);
+
+        if let Some((_id, mut cam)) = scene.find_first_component::<Camera>() {
+            if let Ok(mut cam) = cam.write() {
+                cam.update_aspect(self.size.width as f32, self.size.height as f32);
+                self.camera_uniform.view_proj = cam.get_view_projection_matrix().into();
+            }
+        } else {
+            panic!("No camera in scene!");
+        }
+
+
         self.queue.write_buffer(
             &self.camera_buffer,
             0,
