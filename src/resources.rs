@@ -6,7 +6,8 @@ use std::{
 use super::{error::*, model};
 
 fn load_binary(file_name: &str) -> Result<Vec<u8>> {
-    let path = std::path::Path::new(env!("OUT_DIR"))
+    // TODO make this whole PROJECT_OUT_DIR more stable and usable
+    let path = std::path::Path::new(&std::env::var("PROJECT_OUT_DIR").unwrap())
         .join("res")
         .join(file_name);
     let buffer = std::fs::read(path)?;
@@ -14,7 +15,7 @@ fn load_binary(file_name: &str) -> Result<Vec<u8>> {
 }
 
 pub fn load_string(file_name: &str) -> Result<String> {
-    let path = std::path::Path::new(env!("OUT_DIR"))
+    let path = std::path::Path::new(&std::env::var("PROJECT_OUT_DIR").unwrap())
         .join("res")
         .join(file_name);
     let txt = std::fs::read_to_string(path)?;

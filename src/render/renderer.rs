@@ -1,11 +1,11 @@
 use std::sync::{Arc, RwLock};
 
 use pollster::FutureExt;
-use wgpu::{BindGroup, BindGroupLayout, Buffer, Device, util::DeviceExt};
+use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-use crate::{Camera, model::TransformRaw};
+use crate::{model::TransformRaw, Camera};
 
 use super::super::{
     camera::CameraUniform,
@@ -344,8 +344,8 @@ impl<'a> Renderer<'a> {
                 module: &shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: config.format, // we are not writing to a normal surface
-                    blend: Some(wgpu::BlendState::REPLACE),
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING), // allow transparent textures
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
@@ -355,7 +355,7 @@ impl<'a> Renderer<'a> {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+                // Setting this to line shows wireframes
                 polygon_mode: wgpu::PolygonMode::Fill,
                 // Requires Features::DEPTH_CLIP_CONTROL
                 unclipped_depth: false,
@@ -404,10 +404,11 @@ impl<'a> Renderer<'a> {
     }
 
     fn create_device(adapter: &wgpu::Adapter) -> (wgpu::Device, wgpu::Queue) {
+        let required_features = wgpu::Features::empty() | wgpu::Features::POLYGON_MODE_LINE; // for wireframe rendering
         adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
-                    required_features: wgpu::Features::empty(),
+                    required_features,
                     required_limits: wgpu::Limits::default(),
                     label: None,
                     memory_hints: wgpu::MemoryHints::default(),
@@ -456,7 +457,6 @@ impl<'a> Renderer<'a> {
         } else {
             panic!("No camera in scene!");
         }
-
 
         self.queue.write_buffer(
             &self.camera_buffer,
