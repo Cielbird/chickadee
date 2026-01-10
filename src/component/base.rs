@@ -99,7 +99,7 @@ impl<C: Component> TryInto<ComponentRef<C>> for DynComponentRef {
         if is_type_match {
             Ok(unsafe { self.downcast_unchecked() })
         } else {
-            Err(format!("Can't downcast to type C!"))
+            Err("Can't downcast to component type!".to_string())
         }
     }
 }

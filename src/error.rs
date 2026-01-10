@@ -1,8 +1,6 @@
 #![allow(unused)]
 use std::fmt;
 
-use image;
-
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
@@ -28,18 +26,18 @@ impl std::error::Error for Error {
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        return Self::IoError(e);
+        Self::IoError(e)
     }
 }
 
 impl From<image::ImageError> for Error {
     fn from(e: image::ImageError) -> Self {
-        return Self::ImageError(e);
+        Self::ImageError(e)
     }
 }
 
 impl From<tobj::LoadError> for Error {
     fn from(e: tobj::LoadError) -> Self {
-        return Self::ObjLoadError(e);
+        Self::ObjLoadError(e)
     }
 }

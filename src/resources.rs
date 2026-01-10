@@ -24,7 +24,7 @@ pub fn load_string(file_name: &str) -> Result<String> {
 
 pub fn load_image(file_name: &str) -> Result<image::DynamicImage> {
     let data = load_binary(file_name)?;
-    image::load_from_memory(&data).map_err(|e| Error::ImageError(e))
+    image::load_from_memory(&data).map_err(Error::ImageError)
 }
 
 pub async fn load_model(file_name: &str) -> Result<model::Model> {
@@ -47,7 +47,7 @@ pub async fn load_model(file_name: &str) -> Result<model::Model> {
         |p| async move {
             let pb = parent_path.join(p);
             let p = pb.to_str().expect("fatal path error");
-            let mat_text = load_string(&p).unwrap();
+            let mat_text = load_string(p).unwrap();
             tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
         },
     )

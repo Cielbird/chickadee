@@ -56,9 +56,7 @@ impl Component for Camera {
                 .unwrap();
     }
 
-    fn on_event(&mut self, _scene: &mut Scene, _context: OnEventContext) {
-        return;
-    }
+    fn on_event(&mut self, _scene: &mut Scene, _context: OnEventContext) {}
 }
 
 impl Camera {
@@ -77,6 +75,12 @@ impl Camera {
     }
 
     pub fn get_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        self.view_projection_matrix.clone()
+        self.view_projection_matrix
+    }
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self::new()
     }
 }

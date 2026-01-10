@@ -49,3 +49,9 @@ impl Component for EntityTransform {
 
     fn on_event(&mut self, _scene: &mut crate::Scene, _context: crate::OnEventContext) {}
 }
+
+impl Default for EntityTransform {
+    fn default() -> Self {
+        Self::new()
+    }
+}

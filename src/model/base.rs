@@ -16,6 +16,7 @@ pub struct Model {
 }
 
 impl Model {
+    #[allow(clippy::too_many_arguments)]
     pub fn draw_mesh(
         &mut self,
         mesh_index: usize,

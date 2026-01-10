@@ -129,8 +129,8 @@ impl Transform {
 
         Self {
             position: translation,
-            rotation: rotation,
-            scale: scale,
+            rotation,
+            scale,
         }
     }
 }

@@ -6,6 +6,8 @@ use crate::handler::EngineHandler;
 
 use super::{render::Renderer, scene::Scene};
 
+use crate::error::*;
+
 use winit::event_loop::EventLoop;
 
 pub struct Engine {
@@ -22,8 +24,8 @@ pub fn get_engine() -> Arc<RwLock<Engine>> {
         let engine = Arc::new(RwLock::new(Engine::new()));
         *instance = Some(engine);
     }
-    let instance = instance.clone().unwrap();
-    return instance;
+
+    instance.clone().unwrap()
 }
 
 impl Engine {
@@ -68,14 +70,14 @@ impl Engine {
         }
     }
 
-    pub fn set_cursor_position(&self, x: f32, y: f32) -> Result<(), ()> {
+    pub fn set_cursor_position(&self, x: f32, y: f32) -> Result<()> {
         if let Some(window) = &self.window {
             window
                 .set_cursor_position(PhysicalPosition::new(x, y))
-                .map_err(|_e| ())?;
+                .map_err(|e| Error::Other(e.to_string()))?;
             Ok(())
         } else {
-            Err(())
+            Err(Error::Other("Nonexistant window".to_string()))
         }
     }
 

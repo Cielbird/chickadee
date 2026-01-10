@@ -8,7 +8,7 @@ use winit::window::{Window, WindowId};
 /// Handles running the engine for the winit window
 pub struct EngineHandler {}
 
-impl<'a> EngineHandler {
+impl EngineHandler {
     pub fn new() -> Self {
         Self {}
     }

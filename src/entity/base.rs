@@ -7,6 +7,7 @@ pub struct EntityId {
     id: Uuid,
 }
 
+#[allow(clippy::new_without_default)]
 impl EntityId {
     pub fn new() -> Self {
         Self { id: Uuid::new_v4() }

@@ -79,19 +79,19 @@ impl Scene {
     ) -> Result<()> {
         // iterate on all components, render renderable components
         for entity_id in self.nodes.keys() {
-            let entity = &self.nodes.get(&entity_id).unwrap().entity;
+            let entity = &self.nodes.get(entity_id).unwrap().entity;
 
             for component_id in &entity.components {
                 let component = self
                     .components
-                    .get(&component_id)
+                    .get(component_id)
                     .expect("Component not found, scene corrupted!")
                     .clone();
 
                 if let Ok(mut model) = TryInto::<ComponentRef<Model>>::try_into(component) {
                     let mut model = model.write().unwrap();
 
-                    let transform = self.get_transform(&entity_id);
+                    let transform = self.get_transform(entity_id);
                     let transform = transform.read().unwrap();
                     let global_transform = transform.global.clone();
 
@@ -253,7 +253,7 @@ impl Scene {
                     let mut current = self.get_transform(&next);
                     let mut current = current.write().unwrap();
 
-                    let parent = self.get_transform(&parent);
+                    let parent = self.get_transform(parent);
                     let parent = parent.read().unwrap();
 
                     was_dirty = current.dirty;
@@ -276,7 +276,7 @@ impl Scene {
             };
             if parent_was_dirty {
                 for child_id in &children {
-                    let mut child = self.get_transform(&child_id);
+                    let mut child = self.get_transform(child_id);
                     let mut child = child.write().unwrap();
                     child.dirty = true;
                 }
@@ -285,5 +285,11 @@ impl Scene {
                 frontier.push_front(child.clone());
             }
         }
+    }
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Self::new()
     }
 }
