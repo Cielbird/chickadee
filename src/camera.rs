@@ -51,7 +51,8 @@ impl Component for Camera {
             * proj
             * camera_transform
                 .global_ref()
-                .matrix()
+                .clone()
+                .as_matrix()
                 .inverse_transform()
                 .unwrap();
     }

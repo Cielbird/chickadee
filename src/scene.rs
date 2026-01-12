@@ -1,10 +1,9 @@
-use std::collections::{HashMap, VecDeque};
-
 use crate::component::{Component, ComponentId, ComponentRef};
 use crate::entity::Entity;
 use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::model::Model;
-use crate::EntityTransform;
+use crate::{Collider, EntityTransform};
+use std::collections::{HashMap, VecDeque};
 
 use super::{component::DynComponentRef, entity::EntityId};
 
@@ -127,6 +126,9 @@ impl Scene {
     }
 
     pub fn on_update(&mut self) {
+        // do collider logic
+        self.collider_pass();
+
         // update transforms
         self.update_transforms();
 
@@ -237,6 +239,7 @@ impl Scene {
         self.nodes.get(child_id)?.parent.clone()
     }
 
+    // TODO transforms are now components, so why not just put this in their update() function?
     fn update_transforms(&mut self) {
         let mut frontier = VecDeque::new();
         frontier.push_front(self.root.clone());
@@ -285,6 +288,67 @@ impl Scene {
                 frontier.push_front(child.clone());
             }
         }
+    }
+
+    fn collider_pass(&mut self) {
+        let colliders = self.get_colliders();
+        if colliders.len() < 2 {
+            return;
+        }
+
+        for a_idx in 0..(colliders.len() - 1) {
+            let (a, col_a) = colliders.get(a_idx).unwrap();
+            let col_a = col_a.read().unwrap();
+            let a_dynamic = col_a.dynamic();
+
+            for b_idx in (a_idx + 1)..colliders.len() {
+                let (b, col_b) = colliders.get(b_idx).unwrap();
+                let col_b = col_b.read().unwrap();
+                let b_dynamic = col_a.dynamic();
+
+                if !a_dynamic && !b_dynamic {
+                    continue;
+                }
+
+                let vec = col_a.get_correction_vec(&col_b);
+                match vec {
+                    Some(vec) => {
+                        // move transforms
+                        let mut a_trans = self.get_transform(a);
+                        let mut a_trans = a_trans.write().unwrap();
+                        let mut b_trans = self.get_transform(b);
+                        let mut b_trans = b_trans.write().unwrap();
+                        if a_dynamic {
+                            if b_dynamic {
+                                // a and b are both dynamic
+                                a_trans.translate_global(vec / 2.);
+                                b_trans.translate_global(vec / 2.);
+                            } else {
+                                // only a is dynamic
+                                a_trans.translate_global(vec);
+                            }
+                        } else {
+                            // only b is dynamic
+                            b_trans.translate_global(vec);
+                        }
+                    }
+                    None => continue,
+                }
+            }
+        }
+    }
+
+    fn get_colliders(&mut self) -> Vec<(EntityId, ComponentRef<Collider>)> {
+        // TODO this could be cached
+        let mut colliders = vec![];
+        for (id, component) in &self.components {
+            if let Ok(collider) = component.clone().downcast::<Collider>() {
+                let entity = self.component_entities.get(id).unwrap();
+                colliders.push((*entity, collider));
+            }
+        }
+
+        colliders
     }
 }
 

@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use crate::component::ComponentId;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EntityId {
     id: Uuid,
 }

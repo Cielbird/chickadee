@@ -8,6 +8,7 @@ pub enum Error {
     ImageError(image::ImageError),
     IoError(std::io::Error),
     ObjLoadError(tobj::LoadError),
+    ComponentDowncastError,
     Other(String),
 }
 

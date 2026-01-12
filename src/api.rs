@@ -1,7 +1,10 @@
 // public API for the chickadee engine
-use crate::{camera, component, engine, entity, error, event, model, resources, scene, types};
+use crate::{
+    camera, collision, component, engine, entity, error, event, model, resources, scene, types,
+};
 
 pub use camera::Camera;
+pub use collision::*;
 pub use component::Component;
 pub use engine::{get_engine, Engine};
 pub use entity::transform::EntityTransform;

@@ -5,6 +5,7 @@ use std::{
     },
 };
 
+use crate::error::*;
 use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 
 use super::super::scene::Scene;
@@ -81,6 +82,15 @@ impl DynComponentRef {
         Ok(())
     }
 
+    pub fn downcast<C: Component>(self) -> Result<ComponentRef<C>> {
+        let is_type_match = self.type_id == any::TypeId::of::<C>();
+        if is_type_match {
+            Ok(unsafe { self.downcast_unchecked() })
+        } else {
+            Err(crate::Error::ComponentDowncastError)
+        }
+    }
+
     unsafe fn downcast_unchecked<C: Component>(self) -> ComponentRef<C> {
         let raw = Arc::into_raw(self.inner);
         let data = raw as *const RwLock<C>;
@@ -92,14 +102,9 @@ impl DynComponentRef {
 }
 
 impl<C: Component> TryInto<ComponentRef<C>> for DynComponentRef {
-    type Error = String;
+    type Error = crate::Error;
 
-    fn try_into(self) -> Result<ComponentRef<C>, Self::Error> {
-        let is_type_match = self.type_id == any::TypeId::of::<C>();
-        if is_type_match {
-            Ok(unsafe { self.downcast_unchecked() })
-        } else {
-            Err("Can't downcast to component type!".to_string())
-        }
+    fn try_into(self) -> Result<ComponentRef<C>> {
+        self.downcast()
     }
 }

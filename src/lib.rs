@@ -1,4 +1,5 @@
 mod camera;
+mod collision;
 mod component;
 mod engine;
 mod entity;
