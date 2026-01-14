@@ -1,13 +1,16 @@
+use std::process::exit;
+
 use crate::{transform::Transform, Component, Vector3};
 
+/// Component that represents a transform in the entity hierarchy.
 #[derive(Debug, Clone)]
 pub struct EntityTransform {
     // Transform to go from current to child: T_local
     pub local: Transform,
     // when local transform changes, all the children entities' global transforms need to be updated
     pub dirty: bool,
-    // the transform in global space: T_global = T_parent * T_local
-    pub global: Transform,
+    // the transform of the parent: T_global = T_parent * T_local, or identity() for the root
+    pub parent: Transform,
 }
 
 impl EntityTransform {
@@ -15,7 +18,7 @@ impl EntityTransform {
         Self {
             local: Transform::identity(),
             dirty: false,
-            global: Transform::identity(),
+            parent: Transform::identity(),
         }
     }
 
@@ -24,20 +27,14 @@ impl EntityTransform {
         &self.local
     }
 
-    pub fn global_ref(&self) -> &Transform {
-        &self.global
-    }
-
-    /// Translate along global axis:
-    /// T_local = T_local * T_global^-1 * dT
+    /// Translate along global axis
     /// where dT is the global translation
     pub fn translate_global(&mut self, vec: Vector3) {
         self.dirty = true;
 
-        let global_translate = Transform::from_translation(vec);
-        let inverse_global_transform = self.global.clone().inverse();
-        let local_translation = inverse_global_transform * global_translate;
-        self.local = self.local * local_translation;
+        let inverse_parent = self.parent.inverse();
+
+        self.local = (inverse_parent * Transform::from_translation(vec) * self.parent) * self.local;
     }
 
     /// Translate along this local axis:
@@ -54,6 +51,10 @@ impl EntityTransform {
             * Transform::from_angle_z(euler.z)
             * Transform::from_angle_y(euler.y)
             * Transform::from_angle_x(euler.x)
+    }
+
+    pub fn global(&self) -> Transform {
+        self.parent * self.local
     }
 }
 

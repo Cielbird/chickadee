@@ -1,4 +1,4 @@
-use crate::Vector3;
+use crate::{transform::Transform, Vector3};
 
 use super::r#box::BoxCollider;
 
@@ -7,9 +7,16 @@ pub enum ColliderShape {
 }
 
 impl ColliderShape {
-    pub fn get_correction_vec(&self, other: &Self) -> Option<Vector3> {
-        match self {
-            ColliderShape::Box(box_collider) => box_collider.get_correction_vec(other),
+    pub fn get_correction_vec(
+        a: &Self,
+        a_transform: &Transform,
+        b: &Self,
+        b_transform: &Transform,
+    ) -> Option<Vector3> {
+        match (a, b) {
+            (ColliderShape::Box(a), ColliderShape::Box(b)) => {
+                BoxCollider::box_correction_vec(a, a_transform, b, b_transform)
+            }
         }
     }
 }

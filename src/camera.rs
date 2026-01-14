@@ -47,14 +47,8 @@ impl Component for Camera {
         let camera_transform = scene.get_transform(&context.entity);
         let camera_transform = camera_transform.read().unwrap();
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        self.view_projection_matrix = OPENGL_TO_WGPU_MATRIX
-            * proj
-            * camera_transform
-                .global_ref()
-                .clone()
-                .as_matrix()
-                .inverse_transform()
-                .unwrap();
+        self.view_projection_matrix =
+            OPENGL_TO_WGPU_MATRIX * proj * camera_transform.global().inverse().as_matrix();
     }
 
     fn on_event(&mut self, _scene: &mut Scene, _context: OnEventContext) {}

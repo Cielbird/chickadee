@@ -1,4 +1,4 @@
-use crate::{collision::r#box::BoxCollider, Component, Vector3};
+use crate::{collision::r#box::BoxCollider, transform::Transform, Component, Vector3};
 
 use super::shape::ColliderShape;
 
@@ -12,8 +12,13 @@ impl Collider {
         Self { shape, dynamic }
     }
 
-    pub fn get_correction_vec(&self, other: &Self) -> Option<Vector3> {
-        self.shape.get_correction_vec(&other.shape)
+    pub fn get_correction_vec(
+        a: &Self,
+        a_transform: &Transform,
+        b: &Self,
+        b_transform: &Transform,
+    ) -> Option<Vector3> {
+        ColliderShape::get_correction_vec(&a.shape, a_transform, &b.shape, b_transform)
     }
 
     pub fn dynamic(&self) -> bool {

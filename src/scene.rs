@@ -92,7 +92,7 @@ impl Scene {
 
                     let transform = self.get_transform(entity_id);
                     let transform = transform.read().unwrap();
-                    let global_transform = transform.global.clone();
+                    let global_transform = transform.global();
 
                     model.draw_model(
                         &global_transform,
@@ -126,11 +126,11 @@ impl Scene {
     }
 
     pub fn on_update(&mut self) {
-        // do collider logic
-        self.collider_pass();
-
         // update transforms
         self.update_transforms();
+
+        // do collider logic
+        self.collider_pass();
 
         for (component_id, entity_id) in self.component_entities.clone() {
             let component = self
@@ -261,7 +261,7 @@ impl Scene {
 
                     was_dirty = current.dirty;
                     if was_dirty {
-                        current.global = parent.global.clone() * current.local.clone();
+                        current.parent = parent.global();
                         current.dirty = false;
                     }
                 } else {
@@ -271,7 +271,6 @@ impl Scene {
 
                     was_dirty = current.dirty;
                     if was_dirty {
-                        current.global = current.local.clone();
                         current.dirty = false;
                     }
                 }
@@ -298,44 +297,53 @@ impl Scene {
 
         for a_idx in 0..(colliders.len() - 1) {
             let (a, col_a) = colliders.get(a_idx).unwrap();
+            let mut a_trans = self.get_transform(a);
+            let mut a_trans = a_trans.write().unwrap();
             let col_a = col_a.read().unwrap();
             let a_dynamic = col_a.dynamic();
 
             for b_idx in (a_idx + 1)..colliders.len() {
                 let (b, col_b) = colliders.get(b_idx).unwrap();
+                let mut b_trans = self.get_transform(b);
+                let mut b_trans = b_trans.write().unwrap();
                 let col_b = col_b.read().unwrap();
-                let b_dynamic = col_a.dynamic();
+                let b_dynamic = col_b.dynamic();
 
                 if !a_dynamic && !b_dynamic {
                     continue;
                 }
 
-                let vec = col_a.get_correction_vec(&col_b);
+                let vec = Collider::get_correction_vec(
+                    &col_a,
+                    &a_trans.global(),
+                    &col_b,
+                    &b_trans.global(),
+                );
+
                 match vec {
                     Some(vec) => {
                         // move transforms
-                        let mut a_trans = self.get_transform(a);
-                        let mut a_trans = a_trans.write().unwrap();
-                        let mut b_trans = self.get_transform(b);
-                        let mut b_trans = b_trans.write().unwrap();
                         if a_dynamic {
                             if b_dynamic {
                                 // a and b are both dynamic
                                 a_trans.translate_global(vec / 2.);
-                                b_trans.translate_global(vec / 2.);
+                                b_trans.translate_global(-vec / 2.);
                             } else {
                                 // only a is dynamic
                                 a_trans.translate_global(vec);
                             }
                         } else {
                             // only b is dynamic
-                            b_trans.translate_global(vec);
+                            b_trans.translate_global(-vec);
                         }
                     }
                     None => continue,
                 }
             }
         }
+
+        // necesary !
+        self.update_transforms();
     }
 
     fn get_colliders(&mut self) -> Vec<(EntityId, ComponentRef<Collider>)> {

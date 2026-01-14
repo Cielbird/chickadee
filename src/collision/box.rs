@@ -1,6 +1,8 @@
+use std::cmp::min;
+
 use cgmath::vec3;
 
-use crate::{collision::shape::ColliderShape, Component, Vector3};
+use crate::{collision::shape::ColliderShape, transform::Transform, Component, Vector3};
 
 pub struct BoxCollider {
     position: Vector3,
@@ -16,35 +18,63 @@ impl BoxCollider {
         }
     }
 
-    /// Get the collision correction vector for this box with another shape of collider
-    pub fn get_correction_vec(&self, other: &ColliderShape) -> Option<Vector3> {
-        match other {
-            ColliderShape::Box(other) => self.box_correction_vec(other),
-        }
-    }
-
     /// Get the collision correction vector for this box if the other one is also a box
-    fn box_correction_vec(&self, other: &BoxCollider) -> Option<Vector3> {
-        let dx = if self.position.x > other.position.x {
-            (other.position.x + other.dimensions.x) - (self.position.x - self.dimensions.x)
-        } else {
-            (other.position.x - other.dimensions.x) - (self.position.x + self.dimensions.x)
-        };
-        let dy = if self.position.y > other.position.y {
-            (other.position.y + other.dimensions.y) - (self.position.y - self.dimensions.y)
-        } else {
-            (other.position.y - other.dimensions.y) - (self.position.y + self.dimensions.y)
-        };
-        let dz = if self.position.z > other.position.z {
-            (other.position.z + other.dimensions.z) - (self.position.z - self.dimensions.z)
-        } else {
-            (other.position.z - other.dimensions.z) - (self.position.z + self.dimensions.z)
-        };
+    pub fn box_correction_vec(
+        a: &BoxCollider,
+        a_transform: &Transform,
+        b: &BoxCollider,
+        b_transform: &Transform,
+    ) -> Option<Vector3> {
+        // TODO this doesn't take into account rotation or scale!
+        let a_pos = a_transform.translation() + a.position;
+        let b_pos = b_transform.translation() + b.position;
+        let a_min = a_pos - a.dimensions;
+        let a_max = a_pos + a.dimensions;
+        let b_min = b_pos - b.dimensions;
+        let b_max = b_pos + b.dimensions;
 
-        if dx < 0. && dy < 0. && dz < 0. {
+        let x_in_bounds;
+        let dx;
+        if a_pos.x > b_pos.x {
+            dx = (b_max.x) - (a_min.x);
+            x_in_bounds = dx > 0.;
+        } else {
+            dx = (b_min.x) - (a_max.x);
+            x_in_bounds = dx < 0.;
+        }
+
+        let y_in_bounds;
+        let dy;
+        if a_pos.y > b_pos.y {
+            dy = (b_max.y) - (a_min.y);
+            y_in_bounds = dy > 0.;
+        } else {
+            dy = (b_min.y) - (a_max.y);
+            y_in_bounds = dy < 0.;
+        }
+
+        let z_in_bounds;
+        let dz;
+        if a_pos.z > b_pos.z {
+            dz = (b_max.z) - (a_min.z);
+            z_in_bounds = dz > 0.;
+        } else {
+            dz = (b_min.z) - (a_max.z);
+            z_in_bounds = dz < 0.;
+        }
+
+        if !x_in_bounds || !y_in_bounds || !z_in_bounds {
             None
         } else {
-            Some(vec3(dx, dy, dz))
+            // println!("{x_in_bounds}, {y_in_bounds}, {z_in_bounds}, {a_min:?}, {a_max:?}, {b_min:?}, {b_max:?}, ");
+            // take the axis of smallest displacement
+            if dx.abs() < dy.abs() && dx.abs() < dz.abs() {
+                Some(vec3(dx, 0., 0.))
+            } else if dy.abs() < dz.abs() {
+                Some(vec3(0., dy, 0.))
+            } else {
+                Some(vec3(0., 0., dz))
+            }
         }
     }
 }
@@ -56,4 +86,23 @@ impl Component for BoxCollider {
     fn on_update(&mut self, _scene: &mut crate::Scene, _context: crate::OnUpdateContext) {}
 
     fn on_event(&mut self, _scene: &mut crate::Scene, _context: crate::OnEventContext) {}
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_box_corretion_vec() {
+        let box_a = BoxCollider::new(vec3(0., 0., 0.), vec3(1., 1., 1.));
+        let a_transform = Transform::from_translation(vec3(0., 1., 0.));
+        let box_b = BoxCollider::new(vec3(0., 0., 0.), vec3(1.5, 1., 1.));
+        let b_transform = Transform::from_translation(vec3(1., 1., 1.));
+
+        let vec =
+            BoxCollider::box_correction_vec(&box_a, &a_transform, &box_b, &b_transform).unwrap();
+
+        panic!("{:?}", vec);
+    }
 }
