@@ -18,11 +18,6 @@ pub struct Transform {
     t: cgmath::Vector3<f32>,
 }
 
-pub enum TransformSpace {
-    Local,
-    Global,
-}
-
 impl Transform {
     /// The identity transform: T(x) = x
     pub fn identity() -> Self {

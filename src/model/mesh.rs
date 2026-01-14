@@ -117,7 +117,7 @@ impl TransformRaw {
 }
 
 impl Transform {
-    pub fn to_raw(&self) -> TransformRaw {
+    pub fn to_raw(self) -> TransformRaw {
         TransformRaw {
             model: self.as_matrix().into(),
         }

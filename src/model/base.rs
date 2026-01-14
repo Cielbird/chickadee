@@ -86,7 +86,7 @@ impl Model {
         for i in 0..self.meshes.len() {
             self.draw_mesh(
                 i,
-                transform.clone(),
+                *transform,
                 device,
                 queue,
                 render_pass,

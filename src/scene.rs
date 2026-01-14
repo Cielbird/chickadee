@@ -31,7 +31,7 @@ impl Scene {
         let root = EntityId::new();
         let mut nodes = HashMap::new();
         nodes.insert(
-            root.clone(),
+            root,
             Node {
                 parent: None,
                 children: vec![],
@@ -50,14 +50,14 @@ impl Scene {
         };
 
         scene
-            .add_component(scene.root.clone(), EntityTransform::new())
+            .add_component(scene.root, EntityTransform::new())
             .unwrap();
 
         scene
     }
 
     pub fn get_root(&self) -> EntityId {
-        self.root.clone()
+        self.root
     }
 
     pub fn get_transform(&self, entity_id: &EntityId) -> ComponentRef<EntityTransform> {
@@ -118,7 +118,7 @@ impl Scene {
             let _ = component.try_on_start(
                 self,
                 OnStartContext {
-                    entity: entity_id.clone(),
+                    entity: entity_id,
                     component: component_id,
                 },
             );
@@ -142,7 +142,7 @@ impl Scene {
             let _ = component.try_on_update(
                 self,
                 OnUpdateContext {
-                    entity: entity_id.clone(),
+                    entity: entity_id,
                     component: component_id,
                 },
             );
@@ -159,7 +159,7 @@ impl Scene {
             let _ = component.try_on_event(
                 self,
                 OnEventContext {
-                    entity: entity_id.clone(),
+                    entity: entity_id,
                     component: component_id,
                     event: event.into(),
                 },
@@ -170,19 +170,19 @@ impl Scene {
     pub fn add_entity(&mut self, parent: EntityId, name: String) -> Result<EntityId> {
         let id = EntityId::new();
         let new_node = Node {
-            parent: Some(parent.clone()),
+            parent: Some(parent),
             children: vec![],
             entity: Entity::new(name),
         };
 
         if let Some(parent_node) = self.nodes.get_mut(&parent) {
-            parent_node.children.push(id.clone());
+            parent_node.children.push(id);
         }
 
-        self.nodes.insert(id.clone(), new_node);
+        self.nodes.insert(id, new_node);
 
         let transform = EntityTransform::new();
-        self.add_component(id.clone(), transform)?;
+        self.add_component(id, transform)?;
 
         Ok(id)
     }
@@ -236,13 +236,13 @@ impl Scene {
     }
 
     pub fn parent(&self, child_id: &EntityId) -> Option<EntityId> {
-        self.nodes.get(child_id)?.parent.clone()
+        self.nodes.get(child_id)?.parent
     }
 
     // TODO transforms are now components, so why not just put this in their update() function?
     fn update_transforms(&mut self) {
         let mut frontier = VecDeque::new();
-        frontier.push_front(self.root.clone());
+        frontier.push_front(self.root);
         loop {
             let next = frontier.pop_back();
             if next.is_none() {
@@ -284,7 +284,7 @@ impl Scene {
                 }
             }
             for child in children {
-                frontier.push_front(child.clone());
+                frontier.push_front(child);
             }
         }
     }

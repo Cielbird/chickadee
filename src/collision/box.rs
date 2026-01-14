@@ -1,8 +1,6 @@
-use std::cmp::min;
-
 use cgmath::vec3;
 
-use crate::{collision::shape::ColliderShape, transform::Transform, Component, Vector3};
+use crate::{transform::Transform, Component, Vector3};
 
 pub struct BoxCollider {
     position: Vector3,
@@ -66,7 +64,6 @@ impl BoxCollider {
         if !x_in_bounds || !y_in_bounds || !z_in_bounds {
             None
         } else {
-            // println!("{x_in_bounds}, {y_in_bounds}, {z_in_bounds}, {a_min:?}, {a_max:?}, {b_min:?}, {b_max:?}, ");
             // take the axis of smallest displacement
             if dx.abs() < dy.abs() && dx.abs() < dz.abs() {
                 Some(vec3(dx, 0., 0.))

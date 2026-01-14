@@ -1,5 +1,3 @@
-use std::process::exit;
-
 use crate::{transform::Transform, Component, Vector3};
 
 /// Component that represents a transform in the entity hierarchy.
