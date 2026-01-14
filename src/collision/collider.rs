@@ -1,4 +1,4 @@
-use crate::{collision::r#box::BoxCollider, transform::Transform, Component, Vector3};
+use crate::{collision::r#box::SimpleBoxCollider, transform::Transform, Component, Vector3};
 
 use super::shape::ColliderShape;
 
@@ -25,9 +25,9 @@ impl Collider {
         self.dynamic
     }
 
-    pub fn new_box(position: Vector3, dimensions: Vector3, dynamic: bool) -> Self {
+    pub fn new_simple_box(position: Vector3, dimensions: Vector3, dynamic: bool) -> Self {
         Self {
-            shape: ColliderShape::Box(BoxCollider::new(position, dimensions)),
+            shape: ColliderShape::Box(SimpleBoxCollider::new(position, dimensions)),
             dynamic,
         }
     }
