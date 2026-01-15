@@ -304,14 +304,19 @@ impl Scene {
 
             for b_idx in (a_idx + 1)..colliders.len() {
                 let (b, col_b) = colliders.get(b_idx).unwrap();
-                let mut b_trans = self.get_transform(b);
-                let mut b_trans = b_trans.write().unwrap();
+                if a == b {
+                    // an entity cannot collide with itself
+                    continue;
+                }
                 let col_b = col_b.read().unwrap();
                 let b_dynamic = col_b.dynamic();
 
                 if !a_dynamic && !b_dynamic {
                     continue;
                 }
+
+                let mut b_trans = self.get_transform(b);
+                let mut b_trans = b_trans.write().unwrap();
 
                 let vec = Collider::get_correction_vec(
                     &col_a,
@@ -342,6 +347,7 @@ impl Scene {
             }
         }
 
+        println!("yoyoyo");
         // necesary !
         self.update_transforms();
     }
