@@ -1,9 +1,9 @@
 use crate::{transform::Transform, Vector3};
 
-use super::r#box::SimpleBoxCollider;
+use super::r#box::AxisAlignedBox;
 
 pub enum ColliderShape {
-    Box(SimpleBoxCollider),
+    Box(AxisAlignedBox),
 }
 
 impl ColliderShape {
@@ -15,7 +15,7 @@ impl ColliderShape {
     ) -> Option<Vector3> {
         match (a, b) {
             (ColliderShape::Box(a), ColliderShape::Box(b)) => {
-                SimpleBoxCollider::box_correction_vec(a, a_transform, b, b_transform)
+                AxisAlignedBox::box_correction_vec(a, a_transform, b, b_transform)
             }
         }
     }

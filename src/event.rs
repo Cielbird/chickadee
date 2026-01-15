@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{component::ComponentId, entity::EntityId};
 
 pub struct OnStartContext {
@@ -10,6 +12,8 @@ pub struct OnUpdateContext {
     /// Context: current caller's information
     pub entity: EntityId,
     pub component: ComponentId,
+    /// time since last OnUpdate call
+    pub delta_time: Duration,
 }
 
 pub struct OnEventContext {

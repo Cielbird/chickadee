@@ -2,15 +2,15 @@ use cgmath::vec3;
 
 use crate::{transform::Transform, Component, Vector3};
 
-/// Axis-aligned box collider : fast and simple
-pub struct SimpleBoxCollider {
+/// Axis-aligned bounding box : fast and simple
+pub struct AxisAlignedBox {
     /// The center point of the collider, relative to the entity's transform
     position: Vector3,
     /// Dimensions of the collider: x y and z measure from the mid point to the edge
     dimensions: Vector3,
 }
 
-impl SimpleBoxCollider {
+impl AxisAlignedBox {
     pub fn new(position: Vector3, dimensions: Vector3) -> Self {
         Self {
             position,
@@ -20,9 +20,9 @@ impl SimpleBoxCollider {
 
     /// Get the collision correction vector for this box if the other one is also a box
     pub fn box_correction_vec(
-        a: &SimpleBoxCollider,
+        a: &AxisAlignedBox,
         a_transform: &Transform,
-        b: &SimpleBoxCollider,
+        b: &AxisAlignedBox,
         b_transform: &Transform,
     ) -> Option<Vector3> {
         // TODO this doesn't take into account rotation or scale!
@@ -79,7 +79,7 @@ impl SimpleBoxCollider {
 }
 
 // colliders could be treated seperately
-impl Component for SimpleBoxCollider {
+impl Component for AxisAlignedBox {
     fn on_start(&mut self, _scene: &mut crate::Scene, _context: crate::OnStartContext) {}
 
     fn on_update(&mut self, _scene: &mut crate::Scene, _context: crate::OnUpdateContext) {}
@@ -94,13 +94,13 @@ mod tests {
 
     #[test]
     fn test_box_corretion_vec() {
-        let box_a = SimpleBoxCollider::new(vec3(0., 0., 0.), vec3(1., 1., 1.));
+        let box_a = AxisAlignedBox::new(vec3(0., 0., 0.), vec3(1., 1., 1.));
         let a_transform = Transform::from_translation(vec3(0., 1., 0.));
-        let box_b = SimpleBoxCollider::new(vec3(0., 0., 0.), vec3(1.5, 1., 1.));
+        let box_b = AxisAlignedBox::new(vec3(0., 0., 0.), vec3(1.5, 1., 1.));
         let b_transform = Transform::from_translation(vec3(1., 1., 1.));
 
         let vec =
-            SimpleBoxCollider::box_correction_vec(&box_a, &a_transform, &box_b, &b_transform).unwrap();
+            AxisAlignedBox::box_correction_vec(&box_a, &a_transform, &box_b, &b_transform).unwrap();
 
         assert_eq!(vec, vec3(0., 0., -1.));
     }

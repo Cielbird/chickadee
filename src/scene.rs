@@ -4,6 +4,7 @@ use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::model::Model;
 use crate::{Collider, EntityTransform};
 use std::collections::{HashMap, VecDeque};
+use std::time::Duration;
 
 use super::{component::DynComponentRef, entity::EntityId};
 
@@ -125,7 +126,7 @@ impl Scene {
         }
     }
 
-    pub fn on_update(&mut self) {
+    pub fn on_update(&mut self, delta_time: Duration) {
         // update transforms
         self.update_transforms();
 
@@ -144,6 +145,7 @@ impl Scene {
                 OnUpdateContext {
                     entity: entity_id,
                     component: component_id,
+                    delta_time,
                 },
             );
         }

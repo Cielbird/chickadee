@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex, RwLock};
+use std::{sync::{Arc, Mutex, RwLock}, time::Duration};
 
 use winit::{dpi::PhysicalPosition, event::WindowEvent, window::Window};
 
@@ -109,9 +109,9 @@ impl Engine {
         scene_ref.on_start();
     }
 
-    pub fn on_update(&self) {
+    pub fn on_update(&self, delta_time: Duration) {
         let scene_ref = &mut self.scene.write().unwrap();
-        scene_ref.on_update();
+        scene_ref.on_update(delta_time);
     }
 
     pub fn on_event(&self, event: &WindowEvent) {
