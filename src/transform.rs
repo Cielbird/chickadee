@@ -1,6 +1,7 @@
 use cgmath::num_traits::zero;
-use cgmath::{InnerSpace, Matrix, Matrix3, Matrix4, Rad, SquareMatrix, Zero};
-
+use cgmath::{Matrix, Matrix3, Matrix4, Rad, SquareMatrix, Zero};
+#[allow(unused)]
+use cgmath::InnerSpace as _;
 use crate::Vector3;
 
 /// An orthonormal transform
@@ -88,21 +89,23 @@ impl Transform {
     /// Checks all the conditions that a transform must abide by:
     /// - The 3x3 `a` matrix should be orthonormal
     /// - No NaN values
-    #[cfg(debug_assertions)]
     pub fn check_invariants(self) -> Self {
-        if !self.a.is_finite() {
-            panic!("Transform should not be infinite");
-        } else {
-            const EPS: f32 = 1e-3; // lets be leniant
-            if approx::abs_diff_ne!(self.a.x.dot(self.a.y), 0., epsilon = EPS)
-                || approx::abs_diff_ne!(self.a.y.dot(self.a.z), 0., epsilon = EPS)
-                || approx::abs_diff_ne!(self.a.z.dot(self.a.x), 0., epsilon = EPS)
-                || approx::abs_diff_ne!(self.a.x.magnitude2(), 1., epsilon = EPS)
-            {
-                panic!(
+        #[cfg(debug_assertions)]
+        {
+            if !self.a.is_finite() {
+                panic!("Transform should not be infinite");
+            } else {
+                const EPS: f32 = 1e-3; // lets be leniant
+                if approx::abs_diff_ne!(self.a.x.dot(self.a.y), 0., epsilon = EPS)
+                    || approx::abs_diff_ne!(self.a.y.dot(self.a.z), 0., epsilon = EPS)
+                    || approx::abs_diff_ne!(self.a.z.dot(self.a.x), 0., epsilon = EPS)
+                    || approx::abs_diff_ne!(self.a.x.magnitude2(), 1., epsilon = EPS)
+                {
+                    panic!(
                     "`a` component of transform is not orthonormal: {:?}, {},{},{} should all be 0, and {} should be 1",
                     self.a, self.a.x.dot(self.a.y), self.a.y.dot(self.a.z),self.a.z.dot(self.a.x),self.a.x.magnitude2()
                 );
+                }
             }
         }
 

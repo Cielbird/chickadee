@@ -52,6 +52,7 @@ impl EntityTransform {
     }
 
     pub fn global(&self) -> Transform {
+        // TODO this can be cached
         self.parent * self.local
     }
 }

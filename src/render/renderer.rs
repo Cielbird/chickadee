@@ -55,7 +55,7 @@ impl<'a> Renderer<'a> {
 
         // post-processing pipeline
         let post_proc_bind_group_layout = Self::create_post_proc_bind_group_layout(&device);
-        let post_proc_in_texture = Self::create_post_proc_texture(&device);
+        let post_proc_in_texture = Self::create_post_proc_texture(&device, &config);
         let post_proc_bind_group = Self::create_post_proc_bind_group(
             &device,
             &post_proc_bind_group_layout,
@@ -225,7 +225,7 @@ impl<'a> Renderer<'a> {
         })
     }
 
-    fn create_post_proc_texture(device: &wgpu::Device) -> texture::Texture {
+    fn create_post_proc_texture(device: &wgpu::Device, config: &wgpu::SurfaceConfiguration) -> texture::Texture {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Pre-Processed Frame Texture"),
             size: wgpu::Extent3d {
@@ -236,7 +236,7 @@ impl<'a> Renderer<'a> {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Bgra8UnormSrgb, // Must be compatible with the swap chain
+            format: config.format, // Must be compatible with the swap chain
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });

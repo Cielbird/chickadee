@@ -347,7 +347,6 @@ impl Scene {
             }
         }
 
-        println!("yoyoyo");
         // necesary !
         self.update_transforms();
     }
