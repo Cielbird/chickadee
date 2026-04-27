@@ -4,6 +4,7 @@ use winit::dpi::PhysicalSize;
 use crate::{
     camera::CameraUniform,
     model::{TransformRaw, VertexDesc as _},
+    render::fps_indicator::FpsIndicator,
     texture::{self, Texture},
     Camera, Scene, Vertex,
 };
@@ -19,6 +20,7 @@ pub(crate) struct MainRenderPipeline {
     pub camera_buffer: wgpu::Buffer,
     pub depth_texture: crate::texture::Texture,
     pub texture_bind_group_layout: wgpu::BindGroupLayout,
+    fps_indicator: FpsIndicator,
 }
 impl MainRenderPipeline {
     pub fn new(
@@ -52,6 +54,8 @@ impl MainRenderPipeline {
         let depth_texture =
             Texture::create_depth_texture(device, &output_texture.texture, "depth_texture");
 
+        let fps_indicator = FpsIndicator::new(device, &output_texture.texture, queue);
+
         Self {
             device: device.clone(),
             queue: queue.clone(),
@@ -62,6 +66,7 @@ impl MainRenderPipeline {
             camera_buffer,
             depth_texture,
             texture_bind_group_layout,
+            fps_indicator,
         }
     }
 
@@ -86,50 +91,75 @@ impl MainRenderPipeline {
             bytemuck::cast_slice(&[self.camera_uniform]),
         );
 
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Initial Render Pass"),
-            color_attachments: &[
-                // corresponds to @location(0) in wgsl shader
-                Some(wgpu::RenderPassColorAttachment {
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Initial Render Pass"),
+                color_attachments: &[
+                    // corresponds to @location(0) in wgsl shader
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: &self.output_texture.view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }),
+                            store: wgpu::StoreOp::Store,
+                        },
+                        depth_slice: None,
+                    }),
+                ],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
+                occlusion_query_set: None,
+                timestamp_writes: None,
+                multiview_mask: None,
+            });
+
+            render_pass.set_pipeline(&self.pipeline);
+
+            // render scene
+            scene
+                .draw_scene(
+                    &mut render_pass,
+                    &self.device,
+                    &self.queue,
+                    &self.camera_bind_group,
+                    &self.texture_bind_group_layout,
+                )
+                .expect("couldn't draw mesh");
+        }
+
+        {
+            // Debug fps indicator TODO this should later become a UI pass
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &self.output_texture.view,
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
+                        load: wgpu::LoadOp::Load,
                         store: wgpu::StoreOp::Store,
                     },
-                    depth_slice: None,
-                }),
-            ],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: &self.depth_texture.view,
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(1.0),
-                    store: wgpu::StoreOp::Store,
-                }),
-                stencil_ops: None,
-            }),
-            occlusion_query_set: None,
-            timestamp_writes: None,
-            multiview_mask: None,
-        });
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
 
-        render_pass.set_pipeline(&self.pipeline);
-
-        // render scene
-        scene
-            .draw_scene(
-                &mut render_pass,
-                &self.device,
-                &self.queue,
-                &self.camera_bind_group,
-                &self.texture_bind_group_layout,
-            )
-            .expect("couldn't draw mesh");
+            self.fps_indicator
+                .draw(&mut rpass, &self.device, &self.queue);
+        }
     }
 
     fn create_render_pipeline(
