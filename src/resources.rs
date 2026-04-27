@@ -5,7 +5,7 @@ use std::{
 
 use super::{error::*, model};
 
-fn load_binary(file_name: &str) -> Result<Vec<u8>> {
+pub fn load_binary(file_name: &str) -> Result<Vec<u8>> {
     // TODO make this whole PROJECT_OUT_DIR more stable and usable
     let path = std::path::Path::new(&std::env::var("PROJECT_OUT_DIR").unwrap())
         .join("res")

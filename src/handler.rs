@@ -56,7 +56,7 @@ impl ApplicationHandler for EngineHandler {
                     renderer.resize(physical_size);
                 }
                 WindowEvent::RedrawRequested => {
-                    renderer.render().unwrap();
+                    renderer.try_render().unwrap();
                 }
                 _ => {
                     engine.on_event(&event);
