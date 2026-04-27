@@ -1,24 +1,18 @@
 use std::sync::{Arc, RwLock};
 
 use pollster::FutureExt;
-use wgpu::{util::DeviceExt, BindGroup, BindGroupLayout, Buffer, Device};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 
-use crate::render::{
-    fps_indicator::{self, FpsIndicator},
-    main_pipeline::MainRenderPipeline,
-    post_pipeline::PostProcessingPipeline,
-};
+use crate::render::{main_pipeline::MainRenderPipeline, post_pipeline::PostProcessingPipeline};
 
-use super::super::{scene::Scene, texture};
+use super::super::scene::Scene;
 
 pub struct Renderer<'a> {
     window: Arc<Window>,
     size: PhysicalSize<u32>,
 
     scene: Arc<RwLock<Scene>>,
-    fps_indicator: FpsIndicator,
 
     surface: wgpu::Surface<'a>,
     config: wgpu::SurfaceConfiguration,
@@ -43,17 +37,14 @@ impl<'a> Renderer<'a> {
         surface.configure(&device, &config);
 
         // post-processing pipeline
-        let post_proc_pipeline = PostProcessingPipeline::new(&device, &queue, &config);
+        let post_proc_pipeline = PostProcessingPipeline::new(&device, &config);
 
         let render_pipeline =
             MainRenderPipeline::new(&device, &queue, &post_proc_pipeline.input_texture);
 
-        let fps_indicator = FpsIndicator::new(&device, &config, &queue);
-
         Self {
             window,
             scene,
-            fps_indicator,
 
             surface,
             device,
@@ -178,7 +169,8 @@ impl<'a> Renderer<'a> {
         }
 
         // post processing render pass
-        self.post_proc_pipeline.render_pass(&mut encoder, &surface_view);
+        self.post_proc_pipeline
+            .render_pass(&mut encoder, &surface_view);
 
         self.queue.submit(std::iter::once(encoder.finish()));
         surf_tex.present();

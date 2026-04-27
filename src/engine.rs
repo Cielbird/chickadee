@@ -1,4 +1,7 @@
-use std::{sync::{Arc, Mutex, RwLock}, time::Duration};
+use std::{
+    sync::{Arc, Mutex, RwLock},
+    time::Duration,
+};
 
 use winit::{dpi::PhysicalPosition, event::WindowEvent, window::Window};
 

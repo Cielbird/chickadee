@@ -1,8 +1,8 @@
+use crate::Vector3;
 use cgmath::num_traits::zero;
-use cgmath::{Matrix, Matrix3, Matrix4, Rad, SquareMatrix, Zero};
 #[allow(unused)]
 use cgmath::InnerSpace as _;
-use crate::Vector3;
+use cgmath::{Matrix, Matrix3, Matrix4, Rad, SquareMatrix, Zero};
 
 /// An orthonormal transform
 /// +z is out of the screen

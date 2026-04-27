@@ -9,15 +9,11 @@ pub(crate) struct PostProcessingPipeline {
     pub input_texture: texture::Texture,
 }
 impl PostProcessingPipeline {
-    pub(crate) fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        surface_config: &SurfaceConfiguration,
-    ) -> Self {
-        let bind_group_layout = Self::create_bind_group_layout(&device);
-        let input_texture = Self::create_texture(&device, surface_config);
-        let bind_group = Self::create_bind_group(&device, &bind_group_layout, &input_texture);
-        let pipeline = Self::create_pipepine(&device, surface_config, &bind_group_layout);
+    pub(crate) fn new(device: &wgpu::Device, surface_config: &SurfaceConfiguration) -> Self {
+        let bind_group_layout = Self::create_bind_group_layout(device);
+        let input_texture = Self::create_texture(device, surface_config);
+        let bind_group = Self::create_bind_group(device, &bind_group_layout, &input_texture);
+        let pipeline = Self::create_pipepine(device, surface_config, &bind_group_layout);
 
         Self {
             bind_group,
@@ -35,7 +31,7 @@ impl PostProcessingPipeline {
         let mut post_render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass to Offscreen Texture"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &surface_view,
+                view: surface_view,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {

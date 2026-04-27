@@ -1,5 +1,3 @@
-use std::sync::{Arc, RwLock};
-
 use wgpu::util::DeviceExt as _;
 use winit::dpi::PhysicalSize;
 
@@ -29,7 +27,7 @@ impl MainRenderPipeline {
         output_texture: &texture::Texture,
     ) -> Self {
         // how should textures be bound to the shader
-        let texture_bind_group_layout = Self::create_texture_bind_group_layout(&device);
+        let texture_bind_group_layout = Self::create_texture_bind_group_layout(device);
 
         let camera_uniform = CameraUniform::new();
 
@@ -39,20 +37,20 @@ impl MainRenderPipeline {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group_layout = Self::create_camera_bind_group_layout(&device);
+        let camera_bind_group_layout = Self::create_camera_bind_group_layout(device);
 
         let camera_bind_group =
-            Self::create_camera_bind_group(&device, &camera_bind_group_layout, &camera_buffer);
+            Self::create_camera_bind_group(device, &camera_bind_group_layout, &camera_buffer);
 
         let pipeline = Self::create_render_pipeline(
-            &device,
+            device,
             output_texture,
             &texture_bind_group_layout,
             &camera_bind_group_layout,
         );
 
         let depth_texture =
-            Texture::create_depth_texture(&device, &output_texture.texture, "depth_texture");
+            Texture::create_depth_texture(device, &output_texture.texture, "depth_texture");
 
         Self {
             device: device.clone(),

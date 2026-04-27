@@ -1,8 +1,9 @@
 use std::time;
 use wgpu_text::{
-    BrushBuilder, TextBrush, glyph_brush::{
-        BuiltInLineBreaker, Layout, OwnedSection, Section, SectionText, Text, ToSectionText, VerticalAlign, ab_glyph::FontArc
-    }
+    glyph_brush::{
+        ab_glyph::FontArc, BuiltInLineBreaker, Layout, OwnedSection, Section, Text, VerticalAlign,
+    },
+    BrushBuilder, TextBrush,
 };
 
 pub struct FpsIndicator {
@@ -23,7 +24,7 @@ impl FpsIndicator {
         let brush = BrushBuilder::using_font(font)
             /* .initial_cache_size((16_384, 16_384))) */ // use this to avoid resizing cache texture
             .build(device, config.width, config.height, config.format);
-        brush.resize_view(config.width as f32, config.height as f32, &queue);
+        brush.resize_view(config.width as f32, config.height as f32, queue);
 
         let section = Section::default()
             .add_text(
@@ -60,9 +61,7 @@ impl FpsIndicator {
         let section = &self.section;
 
         // Crashes if inner cache exceeds limits.
-        self.brush
-            .queue(&device, &queue, [section])
-            .unwrap();
+        self.brush.queue(device, queue, [section]).unwrap();
         self.brush.draw(render_pass);
     }
 }

@@ -1,10 +1,10 @@
 use crate::engine::get_engine;
 
+use std::time::{Duration, Instant};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
-use std::time::{Duration, Instant};
 
 /// Handles running the engine for the winit window
 pub struct EngineHandler {
@@ -64,7 +64,7 @@ impl ApplicationHandler for EngineHandler {
             }
         }
     }
-    
+
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         let now = Instant::now();
 
@@ -83,12 +83,9 @@ impl ApplicationHandler for EngineHandler {
             self.last_render = now;
         }
 
-        let next_tick = (self.last_render + self.render_dt)
-            .min(self.last_update + self.update_dt);
+        let next_tick = (self.last_render + self.render_dt).min(self.last_update + self.update_dt);
 
         // enforces maximum framerate
-        event_loop.set_control_flow(
-            winit::event_loop::ControlFlow::WaitUntil(next_tick),
-        );
+        event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(next_tick));
     }
 }

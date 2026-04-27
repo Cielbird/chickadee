@@ -1,6 +1,6 @@
-mod renderer;
+mod fps_indicator;
 mod main_pipeline;
 mod post_pipeline;
-mod fps_indicator;
+mod renderer;
 
 pub use renderer::*;
