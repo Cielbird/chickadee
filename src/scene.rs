@@ -21,7 +21,6 @@ pub struct Scene {
 }
 
 pub(crate) struct Node {
-    #[allow(unused)]
     parent: Option<EntityId>,
     children: Vec<EntityId>,
     pub entity: Entity,
@@ -245,47 +244,33 @@ impl Scene {
     fn update_transforms(&mut self) {
         let mut frontier = VecDeque::new();
         frontier.push_front(self.root);
+        // traverse transform tree from root
         loop {
             let next = frontier.pop_back();
             if next.is_none() {
                 break;
             }
             let next = next.unwrap();
-            let (children, parent_was_dirty) = {
+            let (children, new_global) = {
                 let node = self.nodes.get(&next).unwrap();
-                let was_dirty;
-                if let Some(parent) = &node.parent {
-                    let mut current = self.get_transform(&next);
-                    let mut current = current.write().unwrap();
+                let mut new_global = None;
 
-                    let parent = self.get_transform(parent);
-                    let parent = parent.read().unwrap();
+                let current = self.get_transform(&next);
+                let current = current.read().unwrap();
 
-                    was_dirty = current.dirty;
-                    if was_dirty {
-                        current.parent = parent.global();
-                        current.dirty = false;
-                    }
-                } else {
-                    // entity had no parent: root
-                    let mut current = self.get_transform(&next);
-                    let mut current = current.write().unwrap();
-
-                    was_dirty = current.dirty;
-                    if was_dirty {
-                        current.dirty = false;
-                    }
+                let dirty = current.children_dirty();
+                if dirty {
+                    new_global = Some(current.global());
                 }
-                (node.children.clone(), was_dirty)
+
+                (node.children.clone(), new_global)
             };
-            if parent_was_dirty {
-                for child_id in &children {
-                    let mut child = self.get_transform(child_id);
-                    let mut child = child.write().unwrap();
-                    child.dirty = true;
-                }
-            }
             for child in children {
+                if let Some(new_global) = new_global {
+                    let mut child = self.get_transform(&child);
+                    let mut child = child.write().unwrap();
+                    child.set_parent(new_global);
+                }
                 frontier.push_front(child);
             }
         }
@@ -349,7 +334,7 @@ impl Scene {
             }
         }
 
-        // necesary !
+        // necessary !
         self.update_transforms();
     }
 

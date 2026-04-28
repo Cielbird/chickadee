@@ -4,19 +4,22 @@ use crate::{transform::Transform, Component, Vector3};
 #[derive(Debug, Clone)]
 pub struct EntityTransform {
     // Transform to go from current to child: T_local
-    pub local: Transform,
-    // when local transform changes, all the children entities' global transforms need to be updated
-    pub dirty: bool,
-    // the transform of the parent: T_global = T_parent * T_local, or identity() for the root
-    pub parent: Transform,
+    local: Transform,
+    // the global transform of the parent
+    parent: Transform,
+    // T_global = T_parent * T_local, or identity() for the root
+    global: Transform,
+    // when global transform changes, this flag is raised to indicate a need to update children
+    children_dirty: bool,
 }
 
 impl EntityTransform {
     pub fn new() -> Self {
         Self {
             local: Transform::identity(),
-            dirty: false,
             parent: Transform::identity(),
+            global: Transform::identity(),
+            children_dirty: false,
         }
     }
 
@@ -28,32 +31,48 @@ impl EntityTransform {
     /// Translate along global axis
     /// where dT is the global translation
     pub fn translate_global(&mut self, vec: Vector3) {
-        self.dirty = true;
-
         let inverse_parent = self.parent.inverse();
-
         self.local = (inverse_parent * Transform::from_translation(vec) * self.parent) * self.local;
+
+        self.update_global();
     }
 
     /// Translate along this local axis:
     /// T_local = T_local * dT
     /// where dT is the local translation
     pub fn translate_local(&mut self, vec: Vector3) {
-        self.dirty = true;
-        self.local = self.local * Transform::from_translation(vec)
+        self.local = self.local * Transform::from_translation(vec);
+
+        self.update_global();
     }
 
     pub fn rotate_euler_local(&mut self, euler: Vector3) {
-        self.dirty = true;
         self.local = self.local
             * Transform::from_angle_z(euler.z)
             * Transform::from_angle_y(euler.y)
-            * Transform::from_angle_x(euler.x)
+            * Transform::from_angle_x(euler.x);
+
+        self.update_global();
+    }
+
+    /// Sets the parents transform, and calculates the global transform,
+    /// clearing the global_dirty flag
+    pub fn set_parent(&mut self, parent: Transform) {
+        self.parent = parent;
+        self.update_global();
+    }
+    
+    fn update_global(&mut self) {
+        self.global = self.parent * self.local;
+        self.children_dirty = true;
     }
 
     pub fn global(&self) -> Transform {
-        // TODO this can be cached
-        self.parent * self.local
+        self.global
+    }
+
+    pub fn children_dirty(&self) -> bool {
+        self.children_dirty
     }
 }
 
