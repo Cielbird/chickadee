@@ -1,16 +1,19 @@
-use uuid::Uuid;
+use std::sync::atomic::AtomicU32;
 
 use crate::component::ComponentId;
 
+static NEXT_ENTITY_ID: AtomicU32 = AtomicU32::new(0);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EntityId {
-    id: Uuid,
+    id: u32,
 }
 
 #[allow(clippy::new_without_default)]
 impl EntityId {
     pub fn new() -> Self {
-        Self { id: Uuid::new_v4() }
+        let id = NEXT_ENTITY_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Self { id }
     }
 }
 
