@@ -2,7 +2,8 @@ use cgmath::{Matrix4, Zero};
 
 use crate::{
     event::{OnEventContext, OnStartContext, OnUpdateContext},
-    Vector3,
+    transform::Transform,
+    AxisAlignedBoundingBox, Vector3,
 };
 
 use super::{component::Component, scene::Scene};
@@ -35,11 +36,11 @@ impl CameraUniform {
 
 // necessary because cgmath uses opengl style coords, and wgpu uses directx style coords
 #[rustfmt::skip]
-pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 0.5, 0.5,
-    0.0, 0.0, 0.0, 1.0,
+pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
+    cgmath::Vector4::new(1.0, 0.0, 0.0, 0.0),
+    cgmath::Vector4::new(0.0, 1.0, 0.0, 0.0),
+    cgmath::Vector4::new(0.0, 0.0, 0.5, 0.0),
+    cgmath::Vector4::new(0.0, 0.0, 0.5, 1.0),
 );
 
 impl Component for Camera {
@@ -62,9 +63,9 @@ impl Camera {
         Camera {
             view_projection_matrix: Matrix4::zero(),
             aspect: 1.0,
-            fovy: 45.0,
+            fovy: 60.0,
             znear: 0.1,
-            zfar: 100.0,
+            zfar: 1000.0,
         }
     }
 
@@ -76,21 +77,69 @@ impl Camera {
         self.view_projection_matrix
     }
 
-    pub fn contains_point(&self, point: Vector3) -> bool {
-        let clip =
-            self.view_projection_matrix * cgmath::Vector4::new(point.x, point.y, point.z, 1.0);
+    // project a world-space point to clip space
+    fn to_clip_space(&self, point: Vector3) -> cgmath::Vector4<f32> {
+        self.view_projection_matrix * cgmath::Vector4::new(point.x, point.y, point.z, 1.0)
+    }
 
-        // point is behind the camera
-        if clip.w <= 0.0 {
+    // does this camera's frustum contain a point
+    pub fn contains_point(&self, point: Vector3) -> bool {
+        let c = self.to_clip_space(point);
+        Self::clip_inside(c)
+    }
+
+    // does this camera's frustum contain a bounding box with a given transform
+    pub fn contains_bounding_box(
+        &self,
+        transform: &Transform,
+        aabb: &AxisAlignedBoundingBox,
+    ) -> bool {
+        let corners = [
+            aabb.min,
+            Vector3::new(aabb.min.x, aabb.min.y, aabb.max.z),
+            Vector3::new(aabb.min.x, aabb.max.y, aabb.min.z),
+            Vector3::new(aabb.min.x, aabb.max.y, aabb.max.z),
+            Vector3::new(aabb.max.x, aabb.min.y, aabb.min.z),
+            Vector3::new(aabb.max.x, aabb.min.y, aabb.max.z),
+            Vector3::new(aabb.max.x, aabb.max.y, aabb.min.z),
+            aabb.max,
+        ];
+
+        let clips: Vec<_> = corners
+            .iter()
+            .map(|&p| self.to_clip_space((*transform) * p))
+            .collect();
+
+        if clips.iter().all(|c| c.x < -c.w) {
+            return false;
+        }
+        if clips.iter().all(|c| c.x > c.w) {
+            return false;
+        }
+        if clips.iter().all(|c| c.y < -c.w) {
+            return false;
+        }
+        if clips.iter().all(|c| c.y > c.w) {
+            return false;
+        }
+        if clips.iter().all(|c| c.z < 0.0) {
+            return false;
+        }
+        if clips.iter().all(|c| c.z > c.w) {
             return false;
         }
 
-        // perspective divide -> NDC
-        let ndc_x = clip.x / clip.w;
-        let ndc_y = clip.y / clip.w;
-        let ndc_z = clip.z / clip.w;
+        true
+    }
 
-        // wgpu/DirectX NDC: x in [-1,1], y in [-1,1], z in [0,1]
+    // Tests a single clip-space point against all frustum planes
+    fn clip_inside(c: cgmath::Vector4<f32>) -> bool {
+        if c.w <= 0.0 {
+            return false;
+        }
+        let ndc_x = c.x / c.w;
+        let ndc_y = c.y / c.w;
+        let ndc_z = c.z / c.w;
         ndc_x >= -1.0
             && ndc_x <= 1.0
             && ndc_y >= -1.0

@@ -53,20 +53,16 @@ impl Mesh {
     pub fn set_indices(&mut self, indices: Vec<u32>) {
         self.indices = indices;
         // deletes buffers
-        self.buffers = None;
+        self.buffers = None; // TODO shouldn't clear instance buffer
         self.bounding_box = None;
     }
 
-    pub fn buffers_ref(&mut self, device: &Device) -> &MeshBuffers {
-        if self.buffers.is_some() {
-            return self.buffers.as_ref().unwrap();
-        }
-
-        // need to update GPU buffers
-        self.update_buffers(device);
-        return self.buffers.as_ref().unwrap();
+    /// Gets the GPU buffers for the mesh, None if they need to be updated
+    pub fn buffers_ref(&mut self) -> Option<&MeshBuffers> {
+        return self.buffers.as_ref();
     }
 
+    /// Gets the bounding box of the mesh
     pub fn aabb_ref(&mut self) -> &AxisAlignedBoundingBox {
         if self.bounding_box.is_some() {
             return self.bounding_box.as_ref().unwrap();
@@ -82,10 +78,7 @@ impl Mesh {
     }
 
     // update GPU buffers without touching self.dirty
-    fn update_buffers(&mut self, device: &Device) {
-        // destroy current buffers
-        self.buffers = None;
-
+    pub fn update_buffers(&mut self, device: &Device) {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Some Vertex Buffer"),
             contents: bytemuck::cast_slice(self.vertices.as_slice()),
@@ -143,31 +136,15 @@ impl Mesh {
             }
         }
 
-        let position = Vector3::new(
-            (min_x + max_x) / 2.,
-            (min_y + max_y) / 2.,
-            (min_z + max_z) / 2.,
-        );
-        let dimensions = Vector3::new(max_x - min_x, max_y - min_y, max_z - min_z);
-        self.bounding_box = Some(AxisAlignedBoundingBox::new(position, dimensions));
+        let min = Vector3::new(min_x, min_y, min_z);
+        let max = Vector3::new(max_x, max_y, max_z);
+        self.bounding_box = Some(AxisAlignedBoundingBox::new(min, max));
     }
 
     pub fn is_in_view(&mut self, transform: &Transform, camera: &Camera) -> bool {
         let aabb = self.aabb_ref();
-        let corners = [
-            aabb.min,
-            Vector3::new(aabb.min.x, aabb.min.y, aabb.max.z),
-            Vector3::new(aabb.min.x, aabb.max.y, aabb.min.z),
-            Vector3::new(aabb.min.x, aabb.max.y, aabb.max.z),
-            Vector3::new(aabb.max.x, aabb.min.y, aabb.min.z),
-            Vector3::new(aabb.max.x, aabb.min.y, aabb.max.z),
-            Vector3::new(aabb.max.x, aabb.max.y, aabb.min.z),
-            aabb.max,
-        ];
 
-        corners
-            .iter()
-            .any(|point| camera.contains_point((*transform) * (*point)))
+        camera.contains_bounding_box(transform, aabb)
     }
 }
 

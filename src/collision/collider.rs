@@ -36,8 +36,10 @@ impl Collider {
 
     /// Construct a new AABB shaped collider: (axis-aligned bounding box)
     pub fn new_aabb(position: Vector3, dimensions: Vector3, dynamic: bool) -> Self {
+        let min = position - dimensions;
+        let max = position + dimensions;
         Self {
-            shape: ColliderShape::Box(AxisAlignedBoundingBox::new(position, dimensions)),
+            shape: ColliderShape::AABB(AxisAlignedBoundingBox::new(min, max)),
             dynamic,
         }
     }

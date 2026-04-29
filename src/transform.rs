@@ -1,7 +1,7 @@
 use crate::Vector3;
-use cgmath::num_traits::zero;
 #[allow(unused)]
 use cgmath::InnerSpace as _;
+use cgmath::{num_traits::zero, vec3};
 use cgmath::{Matrix, Matrix3, Matrix4, Rad, SquareMatrix, Zero};
 
 /// An orthonormal transform
@@ -75,6 +75,15 @@ impl Transform {
     /// Get the translation of the transform
     pub fn translation(&self) -> Vector3 {
         self.t
+    }
+
+    /// Get the scale of the transform
+    pub fn scale(&self) -> Vector3 {
+        vec3(
+            self.a.x.magnitude(),
+            self.a.y.magnitude(),
+            self.a.z.magnitude(),
+        )
     }
 
     /// Construct transformation that applies the `vec` as a translation

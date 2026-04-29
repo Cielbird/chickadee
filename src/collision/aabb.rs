@@ -1,4 +1,4 @@
-use cgmath::vec3;
+use cgmath::{vec3, InnerSpace};
 
 use crate::{transform::Transform, Component, Vector3};
 
@@ -37,34 +37,38 @@ impl AxisAlignedBoundingBox {
         // TODO this doesn't take into account scale!
         let a_pos = a_transform.translation() + a.center();
         let b_pos = b_transform.translation() + b.center();
+        let a_min = a_transform.translation() + a.min;
+        let b_min = b_transform.translation() + b.min;
+        let a_max = a_transform.translation() + a.max;
+        let b_max = b_transform.translation() + b.max;
 
         let x_in_bounds;
         let dx;
         if a_pos.x > b_pos.x {
-            dx = (b.max.x) - (a.min.x);
+            dx = (b_max.x) - (a_min.x);
             x_in_bounds = dx > 0.;
         } else {
-            dx = (b.min.x) - (a.max.x);
+            dx = (b_min.x) - (a_max.x);
             x_in_bounds = dx < 0.;
         }
 
         let y_in_bounds;
         let dy;
         if a_pos.y > b_pos.y {
-            dy = (b.max.y) - (a.min.y);
+            dy = (b_max.y) - (a_min.y);
             y_in_bounds = dy > 0.;
         } else {
-            dy = (b.min.y) - (a.max.y);
+            dy = (b_min.y) - (a_max.y);
             y_in_bounds = dy < 0.;
         }
 
         let z_in_bounds;
         let dz;
         if a_pos.z > b_pos.z {
-            dz = (b.max.z) - (a.min.z);
+            dz = (b_max.z) - (a_min.z);
             z_in_bounds = dz > 0.;
         } else {
-            dz = (b.min.z) - (a.max.z);
+            dz = (b_min.z) - (a_max.z);
             z_in_bounds = dz < 0.;
         }
 

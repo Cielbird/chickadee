@@ -43,14 +43,24 @@ impl Model {
             .get_mut(mesh.material)
             .ok_or(Error::Other("Invalid mesh index".to_string()))?;
 
-        let mesh_buffers = mesh.buffers_ref(device);
+        let mesh_buffers = mesh.buffers_ref();
+        let mut new_instance_buffer = false;
+        let mesh_buffers = match mesh_buffers {
+            Some(buffers) => buffers,
+            None => {
+                // this buffer re-initialisation should be lazy
+                mesh.update_buffers(device);
+                new_instance_buffer = true;
+                mesh.buffers_ref().unwrap()
+            }
+        };
 
         if mesh_buffers.empty() {
             return Ok(());
         }
 
         // update instance buffer (mesh's rendered transform) if it has moved
-        if transform.is_dirty() {
+        if transform.is_dirty() || new_instance_buffer {
             let transform = transform.global();
             let instance_data = [transform.to_raw()];
             let data: &[u8] = bytemuck::cast_slice(&instance_data);
