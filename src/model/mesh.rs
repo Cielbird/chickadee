@@ -1,6 +1,7 @@
+use cgmath::Vector3;
 use wgpu::{util::DeviceExt as _, Device};
 
-use crate::{model::Vertex, transform::Transform};
+use crate::{model::Vertex, transform::Transform, AxisAlignedBoundingBox, Camera};
 
 #[derive(Debug)]
 pub struct Mesh {
@@ -8,12 +9,12 @@ pub struct Mesh {
     pub name: String,
 
     // CPU buffer
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<u32>,
-    pub material: usize,
+    vertices: Vec<Vertex>,
+    indices: Vec<u32>,
+    pub material: usize, // buffers don't depend on this
 
-    pub dirty: bool, // true if CPU vertex and index buffers have been changed but not GPU buffers
-    pub buffers: Option<MeshBuffers>,
+    buffers: Option<MeshBuffers>,
+    bounding_box: Option<AxisAlignedBoundingBox>,
 }
 
 #[derive(Debug)]
@@ -37,13 +38,54 @@ impl Mesh {
             vertices,
             indices,
             material,
-            dirty: true,
             buffers: None,
+            bounding_box: None,
         }
     }
 
-    /// Update GPU buffers according to data in CPU buffers
-    pub fn reinit_buffers(&mut self, device: &Device) {
+    pub fn set_vertices(&mut self, vertices: Vec<Vertex>) {
+        self.vertices = vertices;
+        // deletes buffers
+        self.buffers = None;
+        self.bounding_box = None;
+    }
+
+    pub fn set_indices(&mut self, indices: Vec<u32>) {
+        self.indices = indices;
+        // deletes buffers
+        self.buffers = None;
+        self.bounding_box = None;
+    }
+
+    pub fn buffers_ref(&mut self, device: &Device) -> &MeshBuffers {
+        if self.buffers.is_some() {
+            return self.buffers.as_ref().unwrap();
+        }
+
+        // need to update GPU buffers
+        self.update_buffers(device);
+        return self.buffers.as_ref().unwrap();
+    }
+
+    pub fn aabb_ref(&mut self) -> &AxisAlignedBoundingBox {
+        if self.bounding_box.is_some() {
+            return self.bounding_box.as_ref().unwrap();
+        }
+
+        // need to update bounding box
+        self.update_bounding_box();
+        return self.bounding_box.as_ref().unwrap();
+    }
+
+    pub fn num_indices(&self) -> usize {
+        self.indices.len()
+    }
+
+    // update GPU buffers without touching self.dirty
+    fn update_buffers(&mut self, device: &Device) {
+        // destroy current buffers
+        self.buffers = None;
+
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Some Vertex Buffer"),
             contents: bytemuck::cast_slice(self.vertices.as_slice()),
@@ -67,7 +109,65 @@ impl Mesh {
             index_buffer,
             instance_buffer,
         });
-        self.dirty = false;
+    }
+
+    // update the bounding box according to CPU buffers
+    fn update_bounding_box(&mut self) {
+        // update bounding box
+        let mut min_x = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut min_y = f32::MAX;
+        let mut max_y = f32::MIN;
+        let mut min_z = f32::MAX;
+        let mut max_z = f32::MIN;
+
+        for v in &self.vertices {
+            let [x, y, z] = v.position;
+            if x < min_x {
+                min_x = x;
+            }
+            if x > max_x {
+                max_x = x;
+            }
+            if y < min_y {
+                min_y = y;
+            }
+            if y > max_y {
+                max_y = y;
+            }
+            if z < min_z {
+                min_z = z;
+            }
+            if z > max_z {
+                max_z = z;
+            }
+        }
+
+        let position = Vector3::new(
+            (min_x + max_x) / 2.,
+            (min_y + max_y) / 2.,
+            (min_z + max_z) / 2.,
+        );
+        let dimensions = Vector3::new(max_x - min_x, max_y - min_y, max_z - min_z);
+        self.bounding_box = Some(AxisAlignedBoundingBox::new(position, dimensions));
+    }
+
+    pub fn is_in_view(&mut self, transform: &Transform, camera: &Camera) -> bool {
+        let aabb = self.aabb_ref();
+        let corners = [
+            aabb.min,
+            Vector3::new(aabb.min.x, aabb.min.y, aabb.max.z),
+            Vector3::new(aabb.min.x, aabb.max.y, aabb.min.z),
+            Vector3::new(aabb.min.x, aabb.max.y, aabb.max.z),
+            Vector3::new(aabb.max.x, aabb.min.y, aabb.min.z),
+            Vector3::new(aabb.max.x, aabb.min.y, aabb.max.z),
+            Vector3::new(aabb.max.x, aabb.max.y, aabb.min.z),
+            aabb.max,
+        ];
+
+        corners
+            .iter()
+            .any(|point| camera.contains_point((*transform) * (*point)))
     }
 }
 

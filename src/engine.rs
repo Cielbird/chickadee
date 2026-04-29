@@ -20,7 +20,7 @@ pub struct Engine {
 }
 
 pub struct EngineConfig {
-    pub target_fps: f64
+    pub target_fps: f64,
 }
 
 static ENGINE_INSTANCE: Mutex<Option<Arc<RwLock<Engine>>>> = Mutex::new(None);

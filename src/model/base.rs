@@ -1,5 +1,7 @@
 use crate::{
-    TransformComponent, component::Component, model::{Material, Mesh}, transform::Transform
+    component::Component,
+    model::{Material, Mesh},
+    Camera, TransformComponent,
 };
 
 use super::super::{
@@ -19,6 +21,7 @@ impl Model {
         &mut self,
         mesh_index: usize,
         transform: &TransformComponent,
+        camera: &Camera,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -30,16 +33,17 @@ impl Model {
             .get_mut(mesh_index)
             .ok_or(Error::Other("Invalid mesh index".to_string()))?;
 
+        // don't render meshes outside of camera view
+        if !mesh.is_in_view(&transform.global(), camera) {
+            return Ok(());
+        }
+
         let material = self
             .materials
             .get_mut(mesh.material)
             .ok_or(Error::Other("Invalid mesh index".to_string()))?;
 
-        // Update buffers if not updated
-        if mesh.dirty {
-            mesh.reinit_buffers(device);
-        }
-        let mesh_buffers = mesh.buffers.as_mut().unwrap();
+        let mesh_buffers = mesh.buffers_ref(device);
 
         if mesh_buffers.empty() {
             return Ok(());
@@ -53,6 +57,7 @@ impl Model {
             queue.write_buffer(&mesh_buffers.instance_buffer, 0, data);
         }
 
+        // TODO Do the same thing i did with mesh: optional in buffer makes dirty bit redundant
         if material.dirty {
             material.update_buffers(device, queue, material_layout);
         }
@@ -69,7 +74,7 @@ impl Model {
         render_pass.set_bind_group(1, camera_bind_group, &[]);
 
         // draw
-        let num_elements = mesh.indices.len() as u32;
+        let num_elements = mesh.num_indices() as u32;
         render_pass.draw_indexed(0..num_elements, 0, 0..1);
 
         Ok(())
@@ -78,6 +83,7 @@ impl Model {
     pub fn draw_model(
         &mut self,
         transform: &TransformComponent,
+        camera: &Camera,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -88,6 +94,7 @@ impl Model {
             self.draw_mesh(
                 i,
                 transform,
+                camera,
                 device,
                 queue,
                 render_pass,

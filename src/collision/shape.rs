@@ -28,12 +28,7 @@ impl ColliderShape {
     ) -> bool {
         match (self, other) {
             (ColliderShape::Box(aabb), ColliderShape::Box(other_aabb)) => {
-                AxisAlignedBoundingBox::contains_aabb(
-                    aabb,
-                    transform,
-                    other_aabb,
-                    other_transform,
-                )
+                AxisAlignedBoundingBox::contains_aabb(aabb, transform, other_aabb, other_transform)
             }
         }
     }

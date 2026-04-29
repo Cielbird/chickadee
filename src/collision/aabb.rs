@@ -3,19 +3,17 @@ use cgmath::vec3;
 use crate::{transform::Transform, Component, Vector3};
 
 /// Axis-aligned bounding box : fast and simple
+#[derive(Debug)]
 pub struct AxisAlignedBoundingBox {
-    /// The center point of the collider, relative to the entity's transform
-    position: Vector3,
-    /// Dimensions of the collider: x y and z measure from the mid point to the edge
-    dimensions: Vector3,
+    // the minimum x, y, and z positions
+    pub min: Vector3,
+    // the maximum x, y, and z positions
+    pub max: Vector3,
 }
 
 impl AxisAlignedBoundingBox {
-    pub fn new(position: Vector3, dimensions: Vector3) -> Self {
-        Self {
-            position,
-            dimensions,
-        }
+    pub fn new(min: Vector3, max: Vector3) -> Self {
+        Self { min, max }
     }
 
     /// Get if the two boxes are overlapping
@@ -36,41 +34,37 @@ impl AxisAlignedBoundingBox {
         b: &AxisAlignedBoundingBox,
         b_transform: &Transform,
     ) -> Option<Vector3> {
-        // TODO this doesn't take into account rotation or scale!
-        let a_pos = a_transform.translation() + a.position;
-        let b_pos = b_transform.translation() + b.position;
-        let a_min = a_pos - a.dimensions;
-        let a_max = a_pos + a.dimensions;
-        let b_min = b_pos - b.dimensions;
-        let b_max = b_pos + b.dimensions;
+        // TODO this doesn't take into account scale!
+        let a_pos = a_transform.translation() + a.center();
+        let b_pos = b_transform.translation() + b.center();
 
         let x_in_bounds;
         let dx;
         if a_pos.x > b_pos.x {
-            dx = (b_max.x) - (a_min.x);
+            dx = (b.max.x) - (a.min.x);
             x_in_bounds = dx > 0.;
         } else {
-            dx = (b_min.x) - (a_max.x);
+            dx = (b.min.x) - (a.max.x);
             x_in_bounds = dx < 0.;
         }
 
         let y_in_bounds;
         let dy;
         if a_pos.y > b_pos.y {
-            dy = (b_max.y) - (a_min.y);
+            dy = (b.max.y) - (a.min.y);
             y_in_bounds = dy > 0.;
         } else {
-            dy = (b_min.y) - (a_max.y);
+            dy = (b.min.y) - (a.max.y);
             y_in_bounds = dy < 0.;
         }
 
         let z_in_bounds;
         let dz;
         if a_pos.z > b_pos.z {
-            dz = (b_max.z) - (a_min.z);
+            dz = (b.max.z) - (a.min.z);
             z_in_bounds = dz > 0.;
         } else {
-            dz = (b_min.z) - (a_max.z);
+            dz = (b.min.z) - (a.max.z);
             z_in_bounds = dz < 0.;
         }
 
@@ -86,6 +80,10 @@ impl AxisAlignedBoundingBox {
                 Some(vec3(0., 0., dz))
             }
         }
+    }
+
+    fn center(&self) -> Vector3 {
+        (self.max + self.min) / 2.
     }
 }
 

@@ -1,7 +1,8 @@
 mod aabb;
-mod collider;
 mod arena;
+mod collider;
 mod shape;
 
-pub use collider::Collider;
+pub use aabb::AxisAlignedBoundingBox;
 pub(crate) use arena::CollisionArena;
+pub use collider::Collider;

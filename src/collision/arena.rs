@@ -1,7 +1,4 @@
-use crate::{
-    component::ComponentRef, entity::EntityId, Collider,
-    TransformComponent,
-};
+use crate::{component::ComponentRef, entity::EntityId, Collider, TransformComponent};
 
 pub struct CollisionArena {
     static_colliders: Vec<ColliderInfo>,

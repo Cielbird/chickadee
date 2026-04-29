@@ -1,4 +1,4 @@
-use crate::engine::{EngineConfig, get_engine};
+use crate::engine::{get_engine, EngineConfig};
 
 use std::time::{Duration, Instant};
 use winit::application::ApplicationHandler;

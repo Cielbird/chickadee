@@ -9,8 +9,8 @@ pub struct TransformComponent {
     parent: Transform,
     // T_global = T_parent * T_local, or identity() for the root
     global: Transform,
-    // when global transform changes on a frame, this flag is raised to indicate a need to 
-    // update anything that depended on this transform. this allows components that depend on 
+    // when global transform changes on a frame, this flag is raised to indicate a need to
+    // update anything that depended on this transform. this allows components that depend on
     // the transform to know when it has changed. Cleared every on_update.
     dirty: bool,
 }
@@ -64,7 +64,7 @@ impl TransformComponent {
         self.parent = parent;
         self.update_global();
     }
-    
+
     fn update_global(&mut self) {
         self.global = self.parent * self.local;
         self.dirty = true;

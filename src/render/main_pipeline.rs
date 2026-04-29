@@ -16,7 +16,6 @@ pub(crate) struct MainRenderPipeline {
     output_texture: texture::Texture,
     pub pipeline: wgpu::RenderPipeline,
     pub camera_bind_group: wgpu::BindGroup,
-    pub camera_uniform: CameraUniform,
     pub camera_buffer: wgpu::Buffer,
     pub depth_texture: crate::texture::Texture,
     pub texture_bind_group_layout: wgpu::BindGroupLayout,
@@ -62,7 +61,6 @@ impl MainRenderPipeline {
             output_texture: output_texture.clone(),
             pipeline,
             camera_bind_group,
-            camera_uniform,
             camera_buffer,
             depth_texture,
             texture_bind_group_layout,
@@ -76,19 +74,23 @@ impl MainRenderPipeline {
         encoder: &mut wgpu::CommandEncoder,
         scene: &Scene,
     ) {
-        if let Some((_id, mut cam)) = scene.find_first_component::<Camera>() {
-            if let Ok(mut cam) = cam.write() {
-                cam.update_aspect(size.width as f32, size.height as f32);
-                self.camera_uniform.view_proj = cam.get_view_projection_matrix().into();
-            }
-        } else {
-            panic!("No camera in scene!");
+        let camera_uniform;
+        let (_id, mut camera) = scene
+            .find_first_component::<Camera>()
+            .expect("No camera in scene!");
+        {
+            let mut cam = camera.write().unwrap();
+            cam.update_aspect(size.width as f32, size.height as f32);
+            camera_uniform = CameraUniform {
+                view_proj: cam.get_view_projection_matrix().into(),
+            };
         }
+        let camera = camera.read().unwrap();
 
         self.queue.write_buffer(
             &self.camera_buffer,
             0,
-            bytemuck::cast_slice(&[self.camera_uniform]),
+            bytemuck::cast_slice(&[camera_uniform]),
         );
 
         {
@@ -130,6 +132,7 @@ impl MainRenderPipeline {
             scene
                 .draw_scene(
                     &mut render_pass,
+                    &camera,
                     &self.device,
                     &self.queue,
                     &self.camera_bind_group,

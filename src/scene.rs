@@ -2,7 +2,7 @@ use crate::component::{Component, ComponentId, ComponentRef};
 use crate::entity::Entity;
 use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::model::Model;
-use crate::{Collider, CollisionArena, TransformComponent};
+use crate::{Camera, Collider, CollisionArena, TransformComponent};
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 
@@ -75,8 +75,10 @@ impl Scene {
     pub fn draw_scene(
         &self,
         render_pass: &mut wgpu::RenderPass,
+        camera: &Camera,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
+        // TODO i'd love to find a way to nuke these arguments
         camera_bind_group: &wgpu::BindGroup,
         texture_layout: &wgpu::BindGroupLayout,
     ) -> Result<()> {
@@ -99,6 +101,7 @@ impl Scene {
 
                     model.draw_model(
                         &transform,
+                        camera,
                         device,
                         queue,
                         render_pass,
@@ -297,7 +300,7 @@ impl Scene {
                 break;
             }
             let next = next.unwrap();
-            
+
             let node = self.nodes.get(&next).unwrap();
 
             let mut current = self.get_transform(&next);

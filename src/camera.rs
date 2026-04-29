@@ -1,6 +1,9 @@
 use cgmath::{Matrix4, Zero};
 
-use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
+use crate::{
+    event::{OnEventContext, OnStartContext, OnUpdateContext},
+    Vector3,
+};
 
 use super::{component::Component, scene::Scene};
 
@@ -71,6 +74,29 @@ impl Camera {
 
     pub fn get_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         self.view_projection_matrix
+    }
+
+    pub fn contains_point(&self, point: Vector3) -> bool {
+        let clip =
+            self.view_projection_matrix * cgmath::Vector4::new(point.x, point.y, point.z, 1.0);
+
+        // point is behind the camera
+        if clip.w <= 0.0 {
+            return false;
+        }
+
+        // perspective divide -> NDC
+        let ndc_x = clip.x / clip.w;
+        let ndc_y = clip.y / clip.w;
+        let ndc_z = clip.z / clip.w;
+
+        // wgpu/DirectX NDC: x in [-1,1], y in [-1,1], z in [0,1]
+        ndc_x >= -1.0
+            && ndc_x <= 1.0
+            && ndc_y >= -1.0
+            && ndc_y <= 1.0
+            && ndc_z >= 0.0
+            && ndc_z <= 1.0
     }
 }
 
