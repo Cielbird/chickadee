@@ -60,7 +60,10 @@ impl PostProcessingPipeline {
         config: &wgpu::SurfaceConfiguration,
         post_proc_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> wgpu::RenderPipeline {
-        let shader = device.create_shader_module(wgpu::include_wgsl!("post_shader.wgsl"));
+        // this is a cool CRT shader, look into this TODO
+        // let shader = wgpu::include_wgsl!("crt.wgsl");
+        let shader = wgpu::include_wgsl!("post_shader.wgsl");
+        let shader = device.create_shader_module(shader);
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -139,8 +142,8 @@ impl PostProcessingPipeline {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Pre-Processed Frame Texture"),
             size: wgpu::Extent3d {
-                width: 800,  // was 1600
-                height: 500, // was 1200
+                width: 640,  // was 1600
+                height: 480, // was 1200
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
