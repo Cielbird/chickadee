@@ -3,14 +3,14 @@ use cgmath::vec3;
 use crate::{transform::Transform, Component, Vector3};
 
 /// Axis-aligned bounding box : fast and simple
-pub struct AxisAlignedBox {
+pub struct AxisAlignedBoundingBox {
     /// The center point of the collider, relative to the entity's transform
     position: Vector3,
     /// Dimensions of the collider: x y and z measure from the mid point to the edge
     dimensions: Vector3,
 }
 
-impl AxisAlignedBox {
+impl AxisAlignedBoundingBox {
     pub fn new(position: Vector3, dimensions: Vector3) -> Self {
         Self {
             position,
@@ -18,11 +18,22 @@ impl AxisAlignedBox {
         }
     }
 
-    /// Get the collision correction vector for this box if the other one is also a box
-    pub fn box_correction_vec(
-        a: &AxisAlignedBox,
+    /// Get if the two boxes are overlapping
+    pub fn contains_aabb(
+        &self,
+        transform: &Transform,
+        other: &AxisAlignedBoundingBox,
+        other_transform: &Transform,
+    ) -> bool {
+        // this is fastest
+        Self::aabb_correction_vec(self, transform, other, other_transform).is_some()
+    }
+
+    /// Get the collision correction vector for this AABB if the other one is also a AABB
+    pub fn aabb_correction_vec(
+        a: &AxisAlignedBoundingBox,
         a_transform: &Transform,
-        b: &AxisAlignedBox,
+        b: &AxisAlignedBoundingBox,
         b_transform: &Transform,
     ) -> Option<Vector3> {
         // TODO this doesn't take into account rotation or scale!
@@ -79,7 +90,7 @@ impl AxisAlignedBox {
 }
 
 // colliders could be treated seperately
-impl Component for AxisAlignedBox {
+impl Component for AxisAlignedBoundingBox {
     fn on_start(&mut self, _scene: &mut crate::Scene, _context: crate::OnStartContext) {}
 
     fn on_update(&mut self, _scene: &mut crate::Scene, _context: crate::OnUpdateContext) {}
@@ -94,13 +105,14 @@ mod tests {
 
     #[test]
     fn test_box_corretion_vec() {
-        let box_a = AxisAlignedBox::new(vec3(0., 0., 0.), vec3(1., 1., 1.));
+        let box_a = AxisAlignedBoundingBox::new(vec3(0., 0., 0.), vec3(1., 1., 1.));
         let a_transform = Transform::from_translation(vec3(0., 1., 0.));
-        let box_b = AxisAlignedBox::new(vec3(0., 0., 0.), vec3(1.5, 1., 1.));
+        let box_b = AxisAlignedBoundingBox::new(vec3(0., 0., 0.), vec3(1.5, 1., 1.));
         let b_transform = Transform::from_translation(vec3(1., 1., 1.));
 
         let vec =
-            AxisAlignedBox::box_correction_vec(&box_a, &a_transform, &box_b, &b_transform).unwrap();
+            AxisAlignedBoundingBox::aabb_correction_vec(&box_a, &a_transform, &box_b, &b_transform)
+                .unwrap();
 
         assert_eq!(vec, vec3(0., 0., -1.));
     }

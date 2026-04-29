@@ -1,2 +1,8 @@
+# build
 /target
+
+# editor
+.vscode
+
+# os
 .DS_Store

@@ -2,7 +2,7 @@ use crate::component::{Component, ComponentId, ComponentRef};
 use crate::entity::Entity;
 use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::model::Model;
-use crate::{Collider, EntityTransform};
+use crate::{Collider, CollisionArena, TransformComponent};
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 
@@ -18,6 +18,8 @@ pub struct Scene {
     /// Container for all components
     components: HashMap<ComponentId, DynComponentRef>,
     component_entities: HashMap<ComponentId, EntityId>,
+
+    collision: CollisionArena,
 }
 
 pub(crate) struct Node {
@@ -41,16 +43,18 @@ impl Scene {
 
         let components = HashMap::new();
         let component_entities = HashMap::new();
+        let collision = CollisionArena::new();
 
         let mut scene = Self {
             nodes,
             root,
             components,
             component_entities,
+            collision,
         };
 
         scene
-            .add_component(scene.root, EntityTransform::new())
+            .add_component(scene.root, TransformComponent::new())
             .unwrap();
 
         scene
@@ -60,10 +64,10 @@ impl Scene {
         self.root
     }
 
-    pub fn get_transform(&self, entity_id: &EntityId) -> ComponentRef<EntityTransform> {
+    pub fn get_transform(&self, entity_id: &EntityId) -> ComponentRef<TransformComponent> {
         let (_, transform) = self
-            .get_component::<EntityTransform>(entity_id)
-            .expect("All entities must have transforms!");
+            .get_component::<TransformComponent>(entity_id)
+            .expect("All entities must have transforms!"); // TODO throw error
 
         transform
     }
@@ -92,10 +96,9 @@ impl Scene {
 
                     let transform = self.get_transform(entity_id);
                     let transform = transform.read().unwrap();
-                    let global_transform = transform.global();
 
                     model.draw_model(
-                        &global_transform,
+                        &transform,
                         device,
                         queue,
                         render_pass,
@@ -126,11 +129,11 @@ impl Scene {
     }
 
     pub fn on_update(&mut self, delta_time: Duration) {
+        // do collider logic
+        self.collision.collider_pass();
+
         // update transforms
         self.update_transforms();
-
-        // do collider logic
-        self.collider_pass();
 
         for (component_id, entity_id) in self.component_entities.clone() {
             let component = self
@@ -148,6 +151,9 @@ impl Scene {
                 },
             );
         }
+
+        // clear transform dirty flags
+        self.clear_dirty_transforms();
     }
 
     pub fn on_event(&mut self, event: &winit::event::WindowEvent) {
@@ -182,7 +188,7 @@ impl Scene {
 
         self.nodes.insert(id, new_node);
 
-        let transform = EntityTransform::new();
+        let transform = TransformComponent::new();
         self.add_component(id, transform)?;
 
         Ok(id)
@@ -203,6 +209,11 @@ impl Scene {
         self.component_entities.insert(component_id, entity);
 
         Ok(())
+    }
+
+    pub fn add_collider(&mut self, entity: EntityId, collider: Collider) {
+        let transform = self.get_transform(&entity);
+        self.collision.add_collider(entity, collider, transform)
     }
 
     pub fn find_first_component<C: Component>(&self) -> Option<(ComponentId, ComponentRef<C>)> {
@@ -240,7 +251,6 @@ impl Scene {
         self.nodes.get(child_id)?.parent
     }
 
-    // TODO transforms are now components, so why not just put this in their update() function?
     fn update_transforms(&mut self) {
         let mut frontier = VecDeque::new();
         frontier.push_front(self.root);
@@ -258,7 +268,7 @@ impl Scene {
                 let current = self.get_transform(&next);
                 let current = current.read().unwrap();
 
-                let dirty = current.children_dirty();
+                let dirty = current.is_dirty();
                 if dirty {
                     new_global = Some(current.global());
                 }
@@ -276,79 +286,32 @@ impl Scene {
         }
     }
 
-    fn collider_pass(&mut self) {
-        let colliders = self.get_colliders();
-        if colliders.len() < 2 {
-            return;
-        }
+    /// Clear the dirty flags on each transform
+    fn clear_dirty_transforms(&mut self) {
+        let mut frontier = VecDeque::new();
+        frontier.push_front(self.root);
+        // traverse transform tree from root
+        loop {
+            let next = frontier.pop_back();
+            if next.is_none() {
+                break;
+            }
+            let next = next.unwrap();
+            
+            let node = self.nodes.get(&next).unwrap();
 
-        for a_idx in 0..(colliders.len() - 1) {
-            let (a, col_a) = colliders.get(a_idx).unwrap();
-            let mut a_trans = self.get_transform(a);
-            let mut a_trans = a_trans.write().unwrap();
-            let col_a = col_a.read().unwrap();
-            let a_dynamic = col_a.dynamic();
+            let mut current = self.get_transform(&next);
+            let mut current = current.write().unwrap();
 
-            for b_idx in (a_idx + 1)..colliders.len() {
-                let (b, col_b) = colliders.get(b_idx).unwrap();
-                if a == b {
-                    // an entity cannot collide with itself
-                    continue;
-                }
-                let col_b = col_b.read().unwrap();
-                let b_dynamic = col_b.dynamic();
-
-                if !a_dynamic && !b_dynamic {
-                    continue;
-                }
-
-                let mut b_trans = self.get_transform(b);
-                let mut b_trans = b_trans.write().unwrap();
-
-                let vec = Collider::get_correction_vec(
-                    &col_a,
-                    &a_trans.global(),
-                    &col_b,
-                    &b_trans.global(),
-                );
-
-                match vec {
-                    Some(vec) => {
-                        // move transforms
-                        if a_dynamic {
-                            if b_dynamic {
-                                // a and b are both dynamic
-                                a_trans.translate_global(vec / 2.);
-                                b_trans.translate_global(-vec / 2.);
-                            } else {
-                                // only a is dynamic
-                                a_trans.translate_global(vec);
-                            }
-                        } else {
-                            // only b is dynamic
-                            b_trans.translate_global(-vec);
-                        }
-                    }
-                    None => continue,
+            let dirty = current.is_dirty();
+            // only if transform is dirty so are its children
+            if dirty {
+                current.clear_dirty();
+                for child in &node.children {
+                    frontier.push_front(child.clone());
                 }
             }
         }
-
-        // necessary !
-        self.update_transforms();
-    }
-
-    fn get_colliders(&mut self) -> Vec<(EntityId, ComponentRef<Collider>)> {
-        // TODO this could be cached
-        let mut colliders = vec![];
-        for (id, component) in &self.components {
-            if let Ok(collider) = component.clone().downcast::<Collider>() {
-                let entity = self.component_entities.get(id).unwrap();
-                colliders.push((*entity, collider));
-            }
-        }
-
-        colliders
     }
 }
 

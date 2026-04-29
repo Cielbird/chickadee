@@ -1,4 +1,4 @@
-use crate::engine::get_engine;
+use crate::engine::{EngineConfig, get_engine};
 
 use std::time::{Duration, Instant};
 use winit::application::ApplicationHandler;
@@ -15,12 +15,12 @@ pub struct EngineHandler {
 }
 
 impl EngineHandler {
-    pub fn new() -> Self {
+    pub fn new(config: EngineConfig) -> Self {
         Self {
             last_render: Instant::now(),
             last_update: Instant::now(),
-            render_dt: Duration::from_secs_f64(1.0 / 60.0),
-            update_dt: Duration::from_secs_f64(1.0 / 60.0),
+            render_dt: Duration::from_secs_f64(1.0 / config.target_fps),
+            update_dt: Duration::from_secs_f64(1.0 / config.target_fps),
         }
     }
 }

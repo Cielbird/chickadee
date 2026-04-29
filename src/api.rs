@@ -6,8 +6,8 @@ use crate::{
 pub use camera::Camera;
 pub use collision::*;
 pub use component::Component;
-pub use engine::{get_engine, Engine};
-pub use entity::transform::EntityTransform;
+pub use engine::{get_engine, Engine, EngineConfig};
+pub use entity::transform::TransformComponent;
 pub use error::*;
 pub use event::*;
 pub use model::{Material, Mesh, Model, Vertex};

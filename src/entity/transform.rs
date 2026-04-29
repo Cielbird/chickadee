@@ -2,24 +2,27 @@ use crate::{transform::Transform, Component, Vector3};
 
 /// Component that represents a transform in the entity hierarchy.
 #[derive(Debug, Clone)]
-pub struct EntityTransform {
+pub struct TransformComponent {
     // Transform to go from current to child: T_local
     local: Transform,
     // the global transform of the parent
     parent: Transform,
     // T_global = T_parent * T_local, or identity() for the root
     global: Transform,
-    // when global transform changes, this flag is raised to indicate a need to update children
-    children_dirty: bool,
+    // when global transform changes on a frame, this flag is raised to indicate a need to 
+    // update anything that depended on this transform. this allows components that depend on 
+    // the transform to know when it has changed. Cleared every on_update.
+    dirty: bool,
 }
 
-impl EntityTransform {
+impl TransformComponent {
     pub fn new() -> Self {
         Self {
             local: Transform::identity(),
             parent: Transform::identity(),
             global: Transform::identity(),
-            children_dirty: false,
+            // don't assume anything about the transform :
+            dirty: true,
         }
     }
 
@@ -64,19 +67,23 @@ impl EntityTransform {
     
     fn update_global(&mut self) {
         self.global = self.parent * self.local;
-        self.children_dirty = true;
+        self.dirty = true;
     }
 
     pub fn global(&self) -> Transform {
         self.global
     }
 
-    pub fn children_dirty(&self) -> bool {
-        self.children_dirty
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    pub fn clear_dirty(&mut self) {
+        self.dirty = false;
     }
 }
 
-impl Component for EntityTransform {
+impl Component for TransformComponent {
     fn on_start(&mut self, _scene: &mut crate::Scene, _context: crate::OnStartContext) {}
 
     fn on_update(&mut self, _scene: &mut crate::Scene, _context: crate::OnUpdateContext) {}
@@ -84,7 +91,7 @@ impl Component for EntityTransform {
     fn on_event(&mut self, _scene: &mut crate::Scene, _context: crate::OnEventContext) {}
 }
 
-impl Default for EntityTransform {
+impl Default for TransformComponent {
     fn default() -> Self {
         Self::new()
     }

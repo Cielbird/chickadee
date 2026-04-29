@@ -1,4 +1,4 @@
-use crate::{collision::r#box::AxisAlignedBox, transform::Transform, Component, Vector3};
+use crate::{collision::aabb::AxisAlignedBoundingBox, transform::Transform, Vector3};
 
 use super::shape::ColliderShape;
 
@@ -10,6 +10,15 @@ pub struct Collider {
 impl Collider {
     pub fn new(shape: ColliderShape, dynamic: bool) -> Self {
         Self { shape, dynamic }
+    }
+
+    pub fn contains(
+        &self,
+        transform: &Transform,
+        other: &Self,
+        other_transform: &Transform,
+    ) -> bool {
+        ColliderShape::contains(&self.shape, transform, &other.shape, other_transform)
     }
 
     pub fn get_correction_vec(
@@ -28,17 +37,8 @@ impl Collider {
     /// Construct a new AABB shaped collider: (axis-aligned bounding box)
     pub fn new_aabb(position: Vector3, dimensions: Vector3, dynamic: bool) -> Self {
         Self {
-            shape: ColliderShape::Box(AxisAlignedBox::new(position, dimensions)),
+            shape: ColliderShape::Box(AxisAlignedBoundingBox::new(position, dimensions)),
             dynamic,
         }
     }
-}
-
-// Colliders get special treatment from the Scene
-impl Component for Collider {
-    fn on_start(&mut self, _scene: &mut crate::Scene, _context: crate::OnStartContext) {}
-
-    fn on_update(&mut self, _scene: &mut crate::Scene, _context: crate::OnUpdateContext) {}
-
-    fn on_event(&mut self, _scene: &mut crate::Scene, _context: crate::OnEventContext) {}
 }

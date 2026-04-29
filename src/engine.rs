@@ -19,6 +19,10 @@ pub struct Engine {
     scene: Arc<RwLock<Scene>>,
 }
 
+pub struct EngineConfig {
+    pub target_fps: f64
+}
+
 static ENGINE_INSTANCE: Mutex<Option<Arc<RwLock<Engine>>>> = Mutex::new(None);
 
 pub fn get_engine() -> Arc<RwLock<Engine>> {
@@ -40,12 +44,12 @@ impl Engine {
         }
     }
 
-    pub fn run(scene: Scene) {
+    pub fn run(scene: Scene, config: EngineConfig) {
         Self::set_scene(scene);
         pollster::block_on(async move {
             let event_loop = EventLoop::new().unwrap();
 
-            let mut window_state = EngineHandler::new();
+            let mut window_state = EngineHandler::new(config);
 
             let _ = event_loop.run_app(&mut window_state);
         });

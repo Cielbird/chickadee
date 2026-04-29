@@ -1,7 +1,5 @@
 use crate::{
-    component::Component,
-    model::{Material, Mesh},
-    transform::Transform,
+    TransformComponent, component::Component, model::{Material, Mesh}, transform::Transform
 };
 
 use super::super::{
@@ -20,7 +18,7 @@ impl Model {
     pub fn draw_mesh(
         &mut self,
         mesh_index: usize,
-        transform: Transform,
+        transform: &TransformComponent,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -47,10 +45,13 @@ impl Model {
             return Ok(());
         }
 
-        // update instance buffer (mesh's rendered transform)
-        let instance_data = [transform.to_raw()];
-        let data: &[u8] = bytemuck::cast_slice(&instance_data);
-        queue.write_buffer(&mesh_buffers.instance_buffer, 0, data);
+        // update instance buffer (mesh's rendered transform) if it has moved
+        if transform.is_dirty() {
+            let transform = transform.global();
+            let instance_data = [transform.to_raw()];
+            let data: &[u8] = bytemuck::cast_slice(&instance_data);
+            queue.write_buffer(&mesh_buffers.instance_buffer, 0, data);
+        }
 
         if material.dirty {
             material.update_buffers(device, queue, material_layout);
@@ -76,7 +77,7 @@ impl Model {
 
     pub fn draw_model(
         &mut self,
-        transform: &Transform,
+        transform: &TransformComponent,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass,
@@ -86,7 +87,7 @@ impl Model {
         for i in 0..self.meshes.len() {
             self.draw_mesh(
                 i,
-                *transform,
+                transform,
                 device,
                 queue,
                 render_pass,
