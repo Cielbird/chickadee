@@ -14,6 +14,15 @@ mod texture;
 mod transform;
 mod types;
 
-mod api;
-
-pub use api::*;
+pub use camera::Camera;
+pub use collision::*;
+pub use component::Component;
+pub use engine::{get_engine, Engine, EngineConfig};
+pub use entity::transform::TransformComponent;
+pub use entity::EntityId;
+pub use error::*;
+pub use event::*;
+pub use model::{Material, Mesh, Model, Vertex};
+pub use resources::{load_image, load_model};
+pub use scene::Scene;
+pub use types::*;

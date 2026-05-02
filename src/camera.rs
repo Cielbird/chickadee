@@ -8,6 +8,7 @@ use crate::{
 
 use super::{component::Component, scene::Scene};
 
+#[derive(Clone)]
 pub struct Camera {
     view_projection_matrix: cgmath::Matrix4<f32>,
 
@@ -48,8 +49,7 @@ impl Component for Camera {
 
     fn on_update(&mut self, scene: &mut Scene, context: OnUpdateContext) {
         // update projection matrix from entity's transform
-        let camera_transform = scene.get_transform(&context.entity);
-        let camera_transform = camera_transform.read().unwrap();
+        let camera_transform = scene.get_mut_transform(&context.entity);
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
         self.view_projection_matrix =
             OPENGL_TO_WGPU_MATRIX * proj * camera_transform.global().inverse().as_matrix();

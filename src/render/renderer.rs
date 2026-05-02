@@ -163,9 +163,9 @@ impl<'a> Renderer<'a> {
 
         {
             // main render pass, locks the scene
-            let scene = self.scene.read().unwrap();
+            let mut scene = self.scene.write().unwrap();
             self.render_pipeline
-                .render_pass(self.size, &mut encoder, &scene);
+                .render_pass(self.size, &mut encoder, &mut scene);
         }
 
         // post processing render pass

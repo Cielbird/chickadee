@@ -1,12 +1,14 @@
-use crate::component::{Component, ComponentId, ComponentRef};
+use crate::component::{Component, ComponentId, ComponentStore};
+use crate::entity::transform::TransformComponent;
 use crate::entity::Entity;
 use crate::event::{OnEventContext, OnStartContext, OnUpdateContext};
 use crate::model::Model;
-use crate::{Camera, Collider, CollisionArena, TransformComponent};
+use crate::{Camera, Collider, CollisionArena};
+use std::collections::hash_map::Keys;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 
-use super::{component::DynComponentRef, entity::EntityId};
+use super::entity::EntityId;
 
 use super::error::*;
 
@@ -16,7 +18,7 @@ pub struct Scene {
     root: EntityId,
 
     /// Container for all components
-    components: HashMap<ComponentId, DynComponentRef>,
+    component_store: ComponentStore,
     component_entities: HashMap<ComponentId, EntityId>,
 
     collision: CollisionArena,
@@ -41,14 +43,14 @@ impl Scene {
             },
         );
 
-        let components = HashMap::new();
+        let component_store = ComponentStore::new();
         let component_entities = HashMap::new();
         let collision = CollisionArena::new();
 
         let mut scene = Self {
             nodes,
             root,
-            components,
+            component_store,
             component_entities,
             collision,
         };
@@ -64,95 +66,77 @@ impl Scene {
         self.root
     }
 
-    pub fn get_transform(&self, entity_id: &EntityId) -> ComponentRef<TransformComponent> {
-        let (_, transform) = self
-            .get_component::<TransformComponent>(entity_id)
-            .expect("All entities must have transforms!"); // TODO throw error
-
-        transform
+    pub fn get_transform(&self, entity_id: &EntityId) -> ComponentId {
+        self.get_first_component_id_from_entity::<TransformComponent>(entity_id)
+            .expect("All entities must have transforms!") // TODO throw error
     }
 
-    pub fn draw_scene(
-        &self,
-        render_pass: &mut wgpu::RenderPass,
-        camera: &Camera,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        // TODO i'd love to find a way to nuke these arguments
-        camera_bind_group: &wgpu::BindGroup,
-        texture_layout: &wgpu::BindGroupLayout,
-    ) -> Result<()> {
-        // iterate on all components, render renderable components
-        for entity_id in self.nodes.keys() {
-            let entity = &self.nodes.get(entity_id).unwrap().entity;
-
-            for component_id in &entity.components {
-                let component = self
-                    .components
-                    .get(component_id)
-                    .expect("Component not found, scene corrupted!")
-                    .clone();
-
-                if let Ok(mut model) = TryInto::<ComponentRef<Model>>::try_into(component) {
-                    let mut model = model.write().unwrap();
-
-                    let transform = self.get_transform(entity_id);
-                    let transform = transform.read().unwrap();
-
-                    model.draw_model(
-                        &transform,
-                        camera,
-                        device,
-                        queue,
-                        render_pass,
-                        camera_bind_group,
-                        texture_layout,
-                    )?;
-                }
-            }
-        }
-        Ok(())
+    pub fn get_mut_transform(&mut self, entity_id: &EntityId) -> &mut TransformComponent {
+        let id = &self.get_transform(entity_id);
+        self.get_mut_component(id)
+            .expect("All entities must have transforms!") // TODO throw error
     }
 
     pub fn on_start(&mut self) {
         for (component_id, entity_id) in self.component_entities.clone() {
-            let component = self
-                .components
-                .get(&component_id)
-                .expect("Component not found, scene corrupted!")
-                .clone();
+            // swap component out
+            let mut component = self
+                .component_store
+                .swap(&component_id, None)
+                .expect("Component not found, scene corrupted!");
+
+            // run update
             let _ = component.try_on_start(
                 self,
                 OnStartContext {
                     entity: entity_id,
-                    component: component_id,
+                    component: component_id.clone(),
                 },
             );
+
+            // swap component back in
+            if self
+                .component_store
+                .swap(&component_id, Some(component))
+                .is_some()
+            {
+                panic!("Component duplicate found, scene corrupted!");
+            }
         }
     }
 
     pub fn on_update(&mut self, delta_time: Duration) {
         // do collider logic
-        self.collision.collider_pass();
+        self.collision.collider_pass(&mut self.component_store);
 
         // update transforms
         self.update_transforms();
 
         for (component_id, entity_id) in self.component_entities.clone() {
-            let component = self
-                .components
-                .get(&component_id)
-                .expect("Component not found, scene corrupted!")
-                .clone();
+            // swap component out
+            let mut component = self
+                .component_store
+                .swap(&component_id, None)
+                .expect("Component not found, scene corrupted!");
 
+            // run update
             let _ = component.try_on_update(
                 self,
                 OnUpdateContext {
                     entity: entity_id,
-                    component: component_id,
+                    component: component_id.clone(),
                     delta_time,
                 },
             );
+
+            // swap component back in
+            if self
+                .component_store
+                .swap(&component_id, Some(component))
+                .is_some()
+            {
+                panic!("Component duplicate found, scene corrupted!");
+            }
         }
 
         // clear transform dirty flags
@@ -161,20 +145,86 @@ impl Scene {
 
     pub fn on_event(&mut self, event: &winit::event::WindowEvent) {
         for (component_id, entity_id) in self.component_entities.clone() {
-            let component = self
-                .components
-                .get(&component_id)
-                .expect("Component not found, scene corrupted!")
-                .clone();
+            // swap component out
+            let mut component = self
+                .component_store
+                .swap(&component_id, None)
+                .expect("Component not found, scene corrupted!");
+
+            // run update
             let _ = component.try_on_event(
                 self,
                 OnEventContext {
                     entity: entity_id,
-                    component: component_id,
+                    component: component_id.clone(),
                     event: event.into(),
                 },
             );
+
+            // swap component back in
+            if self
+                .component_store
+                .swap(&component_id, Some(component))
+                .is_some()
+            {
+                panic!("Component duplicate found, scene corrupted!");
+            }
         }
+    }
+
+    pub fn add_component<C: Component>(
+        &mut self,
+        entity: EntityId,
+        component: C,
+    ) -> Result<ComponentId> {
+        if !self.nodes.contains_key(&entity) {
+            return Err(Error::Other("Entity not found!".to_string()));
+        }
+
+        let id = self.component_store.insert(component).unwrap();
+
+        self.component_entities.insert(id.clone(), entity);
+
+        let entity_node = self.nodes.get_mut(&entity).unwrap();
+        entity_node.entity.components.push(id.clone());
+        Ok(id)
+    }
+
+    pub fn get_mut_component<C: Component>(&mut self, id: &ComponentId) -> Option<&mut C> {
+        self.component_store.get_mut(id)
+    }
+
+    pub fn get_ref_component<C: Component>(&self, id: &ComponentId) -> Option<&C> {
+        self.component_store.get_ref(id)
+    }
+
+    pub fn get_mut_first_component<C: Component>(&mut self) -> Option<&mut C> {
+        self.component_store.get_mut_first()
+    }
+
+    pub fn get_ref_first_component<C: Component>(&self) -> Option<&C> {
+        self.component_store.get_ref_first()
+    }
+
+    pub fn get_id_first_component<C: Component>(&self) -> Option<ComponentId> {
+        self.component_store.get_id_first::<C>()
+    }
+
+    pub fn get_first_component_id_from_entity<C: Component>(&self, entity: &EntityId) -> Option<ComponentId> {
+        let entity = &self.nodes.get(entity)?.entity;
+        for c in &entity.components {
+            if let Some(_) = self.get_ref_component::<C>(&c) {
+                return Some(c.clone());
+            }
+        }
+        None
+    }
+
+    pub fn get_mut_disjoint_2<C1: Component, C2: Component>(
+        &mut self,
+        ids: [&ComponentId; 2],
+    ) -> (Option<&mut C1>, Option<&mut C2>) {
+        self.component_store.get_mut_disjoint_2(ids)
     }
 
     pub fn add_entity(&mut self, parent: EntityId, name: String) -> Result<EntityId> {
@@ -197,56 +247,12 @@ impl Scene {
         Ok(id)
     }
 
-    pub fn add_component<C: Component>(&mut self, entity: EntityId, component: C) -> Result<()> {
-        if !self.nodes.contains_key(&entity) {
-            return Err(Error::Other("Entity not found!".to_string()));
-        }
-
-        let component_ref = DynComponentRef::new(component);
-        let component_id = ComponentId::new();
-        self.components.insert(component_id.clone(), component_ref);
-
-        let entity_node = self.nodes.get_mut(&entity).unwrap();
-        entity_node.entity.components.push(component_id.clone());
-
-        self.component_entities.insert(component_id, entity);
-
-        Ok(())
-    }
-
     pub fn add_collider(&mut self, entity: EntityId, collider: Collider) {
         let transform = self.get_transform(&entity);
         self.collision.add_collider(entity, collider, transform)
     }
 
-    pub fn find_first_component<C: Component>(&self) -> Option<(ComponentId, ComponentRef<C>)> {
-        for (comp_id, comp_ref) in &self.components {
-            // Could be optimized with a haspmap
-            if let Ok(x) = comp_ref.clone().try_into() {
-                return Some((comp_id.clone(), x));
-            }
-        }
-
-        None
-    }
-
-    pub fn get_component<C: Component>(
-        &self,
-        entity: &EntityId,
-    ) -> Option<(ComponentId, ComponentRef<C>)> {
-        let entity = &self.nodes.get(entity)?.entity;
-
-        for comp_id in &entity.components {
-            let comp_ref = self.components.get(comp_id).unwrap();
-            // Could be optimized with a haspmap
-            if let Ok(x) = comp_ref.clone().try_into() {
-                return Some((comp_id.clone(), x));
-            }
-        }
-        None
-    }
-
-    pub fn get_entity(&self, comp_id: &ComponentId) -> Option<EntityId> {
+    pub fn get_component_entity(&self, comp_id: &ComponentId) -> Option<EntityId> {
         self.component_entities.get(comp_id).cloned()
     }
 
@@ -265,23 +271,21 @@ impl Scene {
             }
             let next = next.unwrap();
             let (children, new_global) = {
-                let node = self.nodes.get(&next).unwrap();
                 let mut new_global = None;
 
-                let current = self.get_transform(&next);
-                let current = current.read().unwrap();
+                let current = self.get_mut_transform(&next);
 
                 let dirty = current.is_dirty();
                 if dirty {
                     new_global = Some(current.global());
                 }
 
+                let node = self.nodes.get(&next).unwrap();
                 (node.children.clone(), new_global)
             };
             for child in children {
                 if let Some(new_global) = new_global {
-                    let mut child = self.get_transform(&child);
-                    let mut child = child.write().unwrap();
+                    let child = self.get_mut_transform(&child);
                     child.set_parent(new_global);
                 }
                 frontier.push_front(child);
@@ -301,20 +305,26 @@ impl Scene {
             }
             let next = next.unwrap();
 
-            let node = self.nodes.get(&next).unwrap();
-
-            let mut current = self.get_transform(&next);
-            let mut current = current.write().unwrap();
+            let current = self.get_mut_transform(&next);
 
             let dirty = current.is_dirty();
             // only if transform is dirty so are its children
             if dirty {
                 current.clear_dirty();
+                let node = self.nodes.get(&next).unwrap();
                 for child in &node.children {
                     frontier.push_front(child.clone());
                 }
             }
         }
+    }
+
+    pub(crate) fn entities(&self) -> Vec<EntityId> {
+        self.nodes.keys().cloned().collect::<Vec<_>>()
+    }
+
+    pub(crate) fn get_entity(&self, entity: &EntityId) -> Option<&Entity> {
+        self.nodes.get(entity).map(|x| &x.entity)
     }
 }
 

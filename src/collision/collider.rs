@@ -1,4 +1,4 @@
-use crate::{collision::aabb::AxisAlignedBoundingBox, transform::Transform, Vector3};
+use crate::{collision::aabb::AxisAlignedBoundingBox, transform::Transform, Component, Vector3};
 
 use super::shape::ColliderShape;
 
@@ -43,4 +43,12 @@ impl Collider {
             dynamic,
         }
     }
+}
+
+impl Component for Collider {
+    fn on_start(&mut self, scene: &mut crate::Scene, context: crate::OnStartContext) {}
+
+    fn on_update(&mut self, scene: &mut crate::Scene, context: crate::OnUpdateContext) {}
+
+    fn on_event(&mut self, scene: &mut crate::Scene, context: crate::OnEventContext) {}
 }

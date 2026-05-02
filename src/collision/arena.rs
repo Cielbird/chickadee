@@ -1,11 +1,14 @@
-use crate::{component::ComponentRef, entity::EntityId, Collider, TransformComponent};
+use crate::{
+    Collider, Scene, component::{ComponentId, ComponentStore}, entity::{EntityId, transform::TransformComponent}
+};
 
 pub struct CollisionArena {
     static_colliders: Vec<ColliderInfo>,
     dynamic_colliders: Vec<ColliderInfo>,
 }
 
-struct ColliderInfo(Collider, EntityId, ComponentRef<TransformComponent>);
+// collider, it's entity, and the transform component associated
+struct ColliderInfo(Collider, EntityId, ComponentId);
 
 impl CollisionArena {
     pub fn new() -> Self {
@@ -15,7 +18,7 @@ impl CollisionArena {
         }
     }
 
-    pub fn collider_pass(&mut self) {
+    pub fn collider_pass(&mut self, components: &mut ComponentStore) {
         let num_dynamic = self.dynamic_colliders.len();
         let num_static = self.static_colliders.len();
         if !(num_dynamic >= 1 && (num_static + num_dynamic) >= 2) {
@@ -25,18 +28,20 @@ impl CollisionArena {
 
         for (a_idx, a_collider) in self.dynamic_colliders.iter().enumerate() {
             let ColliderInfo(col_a, a, a_trans) = a_collider;
-            let mut a_trans = a_trans.clone();
-            let mut a_trans = a_trans.write().unwrap();
 
             for b_collider in self.dynamic_colliders.iter().skip(a_idx + 1) {
                 let ColliderInfo(col_b, b, b_trans) = b_collider;
-                if a == b {
-                    // an entity cannot collide with itself
+                // an entity cannot collide with itself
+                if a == b || a_trans == b_trans{
                     continue;
                 }
 
-                let mut b_trans = b_trans.clone();
-                let mut b_trans = b_trans.write().unwrap();
+                let (a_trans, b_trans) = components
+                    .get_mut_disjoint_2::<TransformComponent, TransformComponent>([
+                        &a_trans, &b_trans,
+                    ]);
+                let a_trans = a_trans.unwrap();
+                let b_trans = b_trans.unwrap();
 
                 let vec = Collider::get_correction_vec(
                     &col_a,
@@ -58,13 +63,17 @@ impl CollisionArena {
 
             for b_collider in self.static_colliders.iter() {
                 let ColliderInfo(col_b, b, b_trans) = b_collider;
-                if a == b {
-                    // an entity cannot collide with itself
+                // an entity cannot collide with itself
+                if a == b || a_trans == b_trans{
                     continue;
                 }
 
-                let b_trans = b_trans.clone();
-                let b_trans = b_trans.read().unwrap();
+                let (a_trans, b_trans) = components
+                    .get_mut_disjoint_2::<TransformComponent, TransformComponent>([
+                        &a_trans, &b_trans,
+                    ]);
+                let a_trans = a_trans.unwrap();
+                let b_trans = b_trans.unwrap();
 
                 let vec = Collider::get_correction_vec(
                     &col_a,
@@ -89,7 +98,7 @@ impl CollisionArena {
         &mut self,
         entity: EntityId,
         collider: Collider,
-        transform: ComponentRef<TransformComponent>,
+        transform: ComponentId,
     ) {
         if collider.dynamic() {
             self.dynamic_colliders

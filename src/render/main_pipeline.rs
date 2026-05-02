@@ -8,6 +8,7 @@ use crate::{
     texture::{self, Texture},
     Camera, Scene, Vertex,
 };
+use crate::{error::*, Model, TransformComponent};
 
 /// Struct containing all bind groups and layouts for the main render pipeline
 pub(crate) struct MainRenderPipeline {
@@ -72,20 +73,22 @@ impl MainRenderPipeline {
         &mut self,
         size: PhysicalSize<u32>,
         encoder: &mut wgpu::CommandEncoder,
-        scene: &Scene,
+        scene: &mut Scene,
     ) {
         let camera_uniform;
-        let (_id, mut camera) = scene
-            .find_first_component::<Camera>()
-            .expect("No camera in scene!");
         {
-            let mut cam = camera.write().unwrap();
-            cam.update_aspect(size.width as f32, size.height as f32);
+            let camera = scene
+                .get_mut_first_component::<Camera>()
+                .expect("No camera in scene!");
+            camera.update_aspect(size.width as f32, size.height as f32);
             camera_uniform = CameraUniform {
-                view_proj: cam.get_view_projection_matrix().into(),
+                view_proj: camera.get_view_projection_matrix().into(),
             };
         }
-        let camera = camera.read().unwrap();
+        let camera = scene
+            .get_ref_first_component::<Camera>()
+            .expect("No camera in scene!");
+        let camera = camera.clone();
 
         self.queue.write_buffer(
             &self.camera_buffer,
@@ -129,16 +132,16 @@ impl MainRenderPipeline {
             render_pass.set_pipeline(&self.pipeline);
 
             // render scene
-            scene
-                .draw_scene(
-                    &mut render_pass,
-                    &camera,
-                    &self.device,
-                    &self.queue,
-                    &self.camera_bind_group,
-                    &self.texture_bind_group_layout,
-                )
-                .expect("couldn't draw mesh");
+            Self::draw_scene(
+                scene,
+                &mut render_pass,
+                &camera,
+                &self.device,
+                &self.queue,
+                &self.camera_bind_group,
+                &self.texture_bind_group_layout,
+            )
+            .expect("couldn't draw mesh");
         }
 
         {
@@ -163,6 +166,148 @@ impl MainRenderPipeline {
             self.fps_indicator
                 .draw(&mut rpass, &self.device, &self.queue);
         }
+    }
+
+    fn draw_scene(
+        scene: &mut Scene,
+        render_pass: &mut wgpu::RenderPass,
+        camera: &Camera,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        // TODO i'd love to find a way to nuke these arguments
+        camera_bind_group: &wgpu::BindGroup,
+        texture_layout: &wgpu::BindGroupLayout,
+    ) -> Result<()> {
+        // iterate on all components, render renderable components
+        for entity_id in scene.entities() {
+            let entity = scene.get_entity(&entity_id).unwrap();
+
+            for component_id in &entity.components.clone() {
+                if scene.get_ref_component::<Model>(component_id).is_none() {
+                    continue;
+                }
+                // this component is a model.
+
+                let transform_id = scene.get_transform(&entity_id);
+
+                let (model, transform) = scene
+                    .get_mut_disjoint_2::<Model, TransformComponent>([component_id, &transform_id]);
+                let model = model.unwrap();
+                let transform = transform.unwrap();
+
+                Self::draw_model(
+                    model,
+                    &transform,
+                    camera,
+                    device,
+                    queue,
+                    render_pass,
+                    camera_bind_group,
+                    texture_layout,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+
+    pub fn draw_model(
+        model: &mut Model,
+        transform: &TransformComponent,
+        camera: &Camera,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        render_pass: &mut wgpu::RenderPass,
+        camera_bind_group: &wgpu::BindGroup,
+        material_layout: &wgpu::BindGroupLayout,
+    ) -> Result<()> {
+        for i in 0..model.meshes.len() {
+            Self::draw_mesh(
+                model,
+                i,
+                transform,
+                camera,
+                device,
+                queue,
+                render_pass,
+                camera_bind_group,
+                material_layout,
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn draw_mesh(
+        model: &mut Model,
+        mesh_index: usize,
+        transform: &TransformComponent,
+        camera: &Camera,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        render_pass: &mut wgpu::RenderPass,
+        camera_bind_group: &wgpu::BindGroup,
+        material_layout: &wgpu::BindGroupLayout,
+    ) -> Result<()> {
+        let mesh = model
+            .meshes
+            .get_mut(mesh_index)
+            .ok_or(Error::Other("Invalid mesh index".to_string()))?;
+
+        // don't render meshes outside of camera view
+        if !mesh.is_in_view(&transform.global(), camera) {
+            return Ok(());
+        }
+
+        let material = model
+            .materials
+            .get_mut(mesh.material)
+            .ok_or(Error::Other("Invalid mesh index".to_string()))?;
+
+        let mesh_buffers = mesh.buffers_ref();
+        let mut new_instance_buffer = false;
+        let mesh_buffers = match mesh_buffers {
+            Some(buffers) => buffers,
+            None => {
+                // this buffer re-initialisation should be lazy
+                mesh.update_buffers(device);
+                new_instance_buffer = true;
+                mesh.buffers_ref().unwrap()
+            }
+        };
+
+        if mesh_buffers.empty() {
+            return Ok(());
+        }
+
+        // update instance buffer (mesh's rendered transform) if it has moved
+        if transform.is_dirty() || new_instance_buffer {
+            let transform = transform.global();
+            let instance_data = [transform.to_raw()];
+            let data: &[u8] = bytemuck::cast_slice(&instance_data);
+            queue.write_buffer(&mesh_buffers.instance_buffer, 0, data);
+        }
+
+        // TODO Do the same thing i did with mesh: optional in buffer makes dirty bit redundant
+        if material.dirty {
+            material.update_buffers(device, queue, material_layout);
+        }
+        let material_buffers = material.buffers.as_mut().unwrap();
+
+        render_pass.set_vertex_buffer(0, mesh_buffers.vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, mesh_buffers.instance_buffer.slice(..));
+        render_pass.set_index_buffer(
+            mesh_buffers.index_buffer.slice(..),
+            wgpu::IndexFormat::Uint32,
+        );
+
+        render_pass.set_bind_group(0, &material_buffers.bind_group, &[]);
+        render_pass.set_bind_group(1, camera_bind_group, &[]);
+
+        // draw
+        let num_elements = mesh.num_indices() as u32;
+        render_pass.draw_indexed(0..num_elements, 0, 0..1);
+
+        Ok(())
     }
 
     fn create_render_pipeline(
